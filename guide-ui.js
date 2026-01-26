@@ -1,49 +1,34 @@
-let current = "how";
-let navIndex = 0;
-const navBtns = [...document.querySelectorAll("#nav button[data-sec]")];
+const screen=document.getElementById("screen");
 
-function typeText(lines, el){
-  el.innerHTML = "";
-  let i = 0, j = 0;
-  function tick(){
-    if(i >= lines.length) return;
-    if(j < lines[i].length){
-      el.innerHTML += lines[i][j++];
-      setTimeout(tick, 30);
-    }else{
-      el.innerHTML += "<br>";
-      j = 0; i++;
-      setTimeout(tick, 400);
-    }
-  }
-  tick();
+function load(sec){
+screen.innerHTML="";
+const d=GUIDE[sec];
+const h=document.createElement("div");
+h.className="section-title";
+h.textContent=d.title;
+screen.appendChild(h);
+
+if(d.text){
+d.text.forEach(t=>{
+const p=document.createElement("div");
+p.textContent="> "+t;
+screen.appendChild(p);
+});
 }
 
-function loadSection(key){
-  current = key;
-  navBtns.forEach(b=>b.classList.toggle("active", b.dataset.sec===key));
-  const d = GuideData[key];
-  document.getElementById("title").innerText = d.title;
-  typeText(d.narrator, document.getElementById("terminal"));
-  const cards = document.getElementById("cards");
-  cards.innerHTML = "";
-  d.cards.forEach(t=>{
-    const c = document.createElement("div");
-    c.className = "card";
-    c.innerText = t;
-    cards.appendChild(c);
-  });
+if(d.cards){
+d.cards.forEach(o=>{
+const c=document.createElement("div");
+c.className="card";
+if(o.c) c.style.borderLeftColor=o.c;
+c.innerHTML=`<div class="head">${o.n}</div><div class="sub">${o.d}</div>`;
+screen.appendChild(c);
+});
+}
 }
 
-navBtns.forEach((b,i)=>{
-  b.onclick = ()=>{navIndex=i; loadSection(b.dataset.sec);}
+document.querySelectorAll("#nav button[data-sec]").forEach(b=>{
+b.onclick=()=>load(b.dataset.sec);
 });
 
-document.addEventListener("keydown",e=>{
-  if(e.key==="ArrowDown"){navIndex=(navIndex+1)%navBtns.length}
-  if(e.key==="ArrowUp"){navIndex=(navIndex-1+navBtns.length)%navBtns.length}
-  if(e.key==="Enter"){navBtns[navIndex].click()}
-  if(e.key==="Escape"){location.href="../index.html"}
-});
-
-loadSection("how");
+load("how");
