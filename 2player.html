@@ -79,7 +79,7 @@ function loadBeasts() {
   pool.forEach(n => {
     r.innerHTML += `<div class="card" onclick="pick('${n}')" style="--b-color:${db[n].color}"><div class="beast-name">${n}</div><div class="beast-type">${db[n].type}</div></div>`;
   });
-  r.innerHTML += `<div class="card random-card" onclick="pickRandom()" style="--b-color:var(--cyber-blue)"><div class="beast-name">? ? ?</div><div class="beast-type">RANDOM (10% LEGENDARY)</div></div>`;
+  r.innerHTML += `<div class="card random-card" onclick="pickRandom()" style="--b-color:var(--cyber-blue)"><div class="beast-name">? ? ?</div><div class="beast-type">RANDOM</div></div>`;
 }
 
 function loadTrainers() {
