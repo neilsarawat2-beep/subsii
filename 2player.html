@@ -89,7 +89,7 @@ function loadTrainers() {
     if(n === "Lord Keshav") return;
     r.innerHTML += `<div class="card" onclick="pickTrainer('${n}')" style="--b-color:${trainers[n].c}"><div class="beast-name">${n}</div><div class="beast-type" style="color:#fff; margin-bottom: 2px;">${trainers[n].name}</div><div style="font-size:0.5rem; color:#aaa; line-height:1;">${trainers[n].d}</div></div>`;
   });
-  r.innerHTML += `<div class="card random-card" onclick="pickRandomTrainer()" style="--b-color:var(--cyber-blue)"><div class="beast-name">? ? ?</div><div class="beast-type">RANDOM (10% GOD)</div></div>`;
+  r.innerHTML += `<div class="card random-card" onclick="pickRandomTrainer()" style="--b-color:var(--cyber-blue)"><div class="beast-name">? ? ?</div><div class="beast-type">RANDOM</div></div>`;
 }
 
 function pickRandom() {
