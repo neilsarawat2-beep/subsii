@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Subsi ki Jang - Main Menu</title>
+<style>
+:root {
+--term-green: #0f0;
+--term-red: #f00;
+--cyber-blue: #00f3ff;
+--void: #050505;
+}
+body {
+background: #000;
+color: #e0e0e0;
+font-family: 'Courier New', monospace;
+margin: 0;
+height: 100vh;
+display: flex;
+justify-content: center;
+align-items: center;
+overflow: hidden;
+text-transform: uppercase;
+}
+#crt-overlay {
+position: absolute;
+inset: 0;
+pointer-events: none;
+z-index: 999;
+background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%),
+linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+background-size: 100% 2px, 3px 100%;
+animation: flicker 0.15s infinite;
+}
+@keyframes flicker { 0% { opacity: 0.97; } 100% { opacity: 1; } }
+#game-window {
+width: 95vw;
+height: 95vh;
+max-width: 1200px;
+max-height: 850px;
+background: var(--void);
+border: 1px solid #333;
+display: flex;
+flex-direction: column;
+position: relative;
+box-shadow: 0 0 20px rgba(0,0,0,0.8);
+overflow: hidden;
+justify-content: center;
+align-items: center;
+}
+#main-title {
+font-size: 5rem;
+color: #fff;
+text-shadow: 4px 4px 0px var(--cyber-blue);
+margin-bottom: 50px;
+letter-spacing: 15px;
+font-weight: 900;
+animation: glitch 2s infinite;
+text-align: center;
+}
+@keyframes glitch {
+0% {transform: translate(0)}
+20% {transform: translate(-2px, 2px)}
+40% {transform: translate(-2px, -2px)}
+60% {transform: translate(2px, 2px)}
+80% {transform: translate(2px, -2px)}
+100% {transform: translate(0)}
+}
+#mode-select {
+display: flex;
+flex-direction: column;
+align-items: center;
+gap: 25px;
+}
+.mode-btn {
+background: #000;
+color: var(--cyber-blue);
+border: 2px solid var(--cyber-blue);
+padding: 20px 60px;
+cursor: pointer;
+font-family: 'Courier New';
+font-weight: 900;
+font-size: 1.3rem;
+transition: all 0.3s;
+min-width: 400px;
+text-align: center;
+}
+.mode-btn:hover {
+background: var(--cyber-blue);
+color: #000;
+transform: scale(1.05);
+box-shadow: 0 0 20px var(--cyber-blue);
+}
+.mode-btn.tower {
+border-color: #ff0055;
+color: #ff0055;
+}
+.mode-btn.tower:hover {
+background: #ff0055;
+color: #000;
+box-shadow: 0 0 20px #ff0055;
+}
+.mode-btn.online {
+border-color: #00ff00;
+color: #00ff00;
+}
+.mode-btn.online:hover {
+background: #00ff00;
+color: #000;
+box-shadow: 0 0 20px #00ff00;
+}
+#subtitle {
+color: #666;
+font-size: 0.9rem;
+margin-top: 50px;
+letter-spacing: 3px;
+}
+</style>
+</head>
+<body>
+<div id="crt-overlay"></div>
+<div id="game-window">
+<h1 id="main-title">SUBSI KI JANG</h1>
+<div id="mode-select">
+<button class="mode-btn" onclick="location.href='1player.html'">1 PLAYER (VS CPU)</button>
+<button class="mode-btn" onclick="location.href='2player.html'">2 PLAYER (LOCAL VERSUS)</button>
+<button class="mode-btn online" onclick="location.href='online.html'">ONLINE MULTIPLAYER</button>
+<button class="mode-btn tower" onclick="location.href='tower.html'">TOWER MODE (SURVIVAL)</button>
+</div>
+<div id="subtitle">[ SELECT YOUR BATTLE MODE ]</div>
+</div>
+</body>
+</html>
