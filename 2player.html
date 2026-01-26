@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Subsi Ki Jang — 2 Player Versus</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!-- Shared Styles -->
+<link rel="stylesheet" href="shared.css">
+
+<style>
+/* minimal extra for 2P flow */
+.turn-indicator {
+  margin-top: 10px;
+  font-size: 0.9rem;
+  letter-spacing: 3px;
+  color: var(--cyber-blue);
+}
+.random-card {
+  border: 2px dashed var(--cyber-blue) !important;
+  animation: pulse 1.5s infinite;
+}
+</style>
+</head>
+
+<body>
+<div id="crt-overlay"></div>
+
+<div id="game-window">
+
+<button id="back-btn" onclick="location.href='index.html'">BACK</button>
+
+<!-- SELECTION SCREEN -->
+<div id="selection-screen">
+  <h1>2 PLAYER MODE</h1>
+  <div class="turn-indicator" id="turnText"></div>
+
+  <div class="grid" id="selectionGrid"></div>
+</div>
+
+<!-- BATTLE SCREEN (reuses same structure as 1P) -->
+<div id="battle-screen">
+  <!-- you already have full battle logic elsewhere -->
+</div>
+
+</div>
+
+<!-- Shared Game Data -->
+<script src="game-data.js"></script>
+
+<script>
+/* ===============================
+   2 PLAYER HOT-SEAT LOGIC
+================================ */
+
+let phase = "P1_BEAST"; 
+let p1 = { beast:null, trainer:null };
+let p2 = { beast:null, trainer:null };
+
+const grid = document.getElementById("selectionGrid");
+const turnText = document.getElementById("turnText");
+
+/* ---------- helpers ---------- */
+
+function isForbiddenRoll() {
+  return Math.random() < 0.10; // 🔥 10% chance
+}
+
+function clearGrid() {
+  grid.innerHTML = "";
+}
+
+function card(name, sub, color, onclick, isRandom=false) {
+  const d = document.createElement("div");
+  d.className = "card" + (isRandom ? " random-card" : "");
+  d.style.setProperty("--b-color", color || "var(--cyber-blue)");
+  d.innerHTML = `
+    <div class="beast-name">${name}</div>
+    <div class="beast-type">${sub}</div>
+  `;
+  d.onclick = onclick;
+  grid.appendChild(d);
+}
+
+/* ---------- RENDER PHASES ---------- */
+
+function renderBeastSelect(player) {
+  clearGrid();
+  turnText.textContent = `${player} — SELECT BEAST`;
+
+  Object.keys(db).forEach(b => {
+    if (b === "Vibhamon") return; // 🔒 hidden from manual pick
+    card(b, db[b].type, db[b].color, () => selectBeast(player, b));
+  });
+
+  card("RANDOM", "???", null, () => randomBeast(player), true);
+}
+
+function renderTrainerSelect(player) {
+  clearGrid();
+  turnText.textContent = `${player} — SELECT TRAINER`;
+
+  Object.keys(trainers).forEach(t => {
+    if (t === "Lord Keshav") return; // 🔒 hidden from manual pick
+    card(t, trainers[t].name, trainers[t].c, () => selectTrainer(player, t));
+  });
+
+  card("RANDOM", "???", null, () => randomTrainer(player), true);
+}
+
+/* ---------- SELECTION ACTIONS ---------- */
+
+function selectBeast(player, beast) {
+  (player === "P1" ? p1 : p2).beast = beast;
+  advance();
+}
+
+function selectTrainer(player, trainer) {
+  (player === "P1" ? p1 : p2).trainer = trainer;
+  advance();
+}
+
+/* ---------- RANDOM LOGIC (🔥 SPECIAL) ---------- */
+
+function randomBeast(player) {
+  const lucky = isForbiddenRoll();
+
+  const pool = lucky
+    ? Object.keys(db) // includes Vibhamon
+    : Object.keys(db).filter(b => b !== "Vibhamon");
+
+  const pick = pool[Math.floor(Math.random() * pool.length)];
+  (player === "P1" ? p1 : p2).beast = pick;
+
+  advance();
+}
+
+function randomTrainer(player) {
+  const lucky = isForbiddenRoll();
+
+  const pool = lucky
+    ? Object.keys(trainers) // includes Lord Keshav
+    : Object.keys(trainers).filter(t => t !== "Lord Keshav");
+
+  const pick = pool[Math.floor(Math.random() * pool.length)];
+  (player === "P1" ? p1 : p2).trainer = pick;
+
+  advance();
+}
+
+/* ---------- FLOW CONTROL ---------- */
+
+function advance() {
+  switch (phase) {
+    case "P1_BEAST":
+      phase = "P2_BEAST";
+      renderBeastSelect("P2");
+      break;
+
+    case "P2_BEAST":
+      phase = "P1_TRAINER";
+      renderTrainerSelect("P1");
+      break;
+
+    case "P1_TRAINER":
+      phase = "P2_TRAINER";
+      renderTrainerSelect("P2");
+      break;
+
+    case "P2_TRAINER":
+      startBattle();
+      break;
+  }
+}
+
+/* ---------- START ---------- */
+
+function startBattle() {
+  console.log("P1:", p1);
+  console.log("P2:", p2);
+
+  document.getElementById("selection-screen").style.display = "none";
+  document.getElementById("battle-screen").style.display = "flex";
+
+  /*
+    Hook this into your existing battle engine:
+    initBattle(p1, p2, { mode: "2P" });
+  */
+}
+
+/* ---------- INIT ---------- */
+
+renderBeastSelect("P1");
+
+</script>
+</body>
+</html>
