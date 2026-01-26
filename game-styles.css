@@ -1,4 +1,4 @@
-/* Shared Styles for Subsi Ki Jang */
+/* Shared Styles for Subsi Ki Jang - FULLY RESPONSIVE */
 
 :root {
   --term-green: #0f0;
@@ -9,21 +9,28 @@
   --scan-line: rgba(0,0,0,0.5);
 }
 
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
 body {
   background: #000;
   color: #e0e0e0;
   font-family: 'Courier New', monospace;
   margin: 0;
-  height: 100vh;
+  min-height: 100vh;
   display: flex;
   justify-content: center;
   align-items: center;
   overflow: hidden;
   text-transform: uppercase;
+  position: relative;
 }
 
 #crt-overlay {
-  position: absolute;
+  position: fixed;
   inset: 0;
   pointer-events: none;
   z-index: 999;
@@ -39,17 +46,29 @@ body {
 }
 
 #game-window {
-  width: 95vw;
-  height: 95vh;
-  max-width: 1200px;
-  max-height: 850px;
+  width: 100vw;
+  height: 100vh;
+  max-width: 100%;
+  max-height: 100%;
   background: var(--void);
-  border: 1px solid #333;
+  border: none;
   display: flex;
   flex-direction: column;
   position: relative;
-  box-shadow: 0 0 20px rgba(0,0,0,0.8);
+  box-shadow: none;
   overflow: hidden;
+}
+
+/* Desktop/Tablet landscape (wider screens) */
+@media (min-width: 768px) and (min-aspect-ratio: 4/3) {
+  #game-window {
+    width: 95vw;
+    height: 95vh;
+    max-width: 1200px;
+    max-height: 850px;
+    border: 1px solid #333;
+    box-shadow: 0 0 20px rgba(0,0,0,0.8);
+  }
 }
 
 #selection-screen {
@@ -60,17 +79,19 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 20px;
+  padding: 10px;
+  overflow-y: auto;
 }
 
 #selection-screen h1 {
-  font-size: 4rem;
+  font-size: clamp(2rem, 8vw, 4rem);
   color: #fff;
-  text-shadow: 4px 4px 0px var(--cyber-blue);
-  margin-bottom: 5px;
-  letter-spacing: 10px;
+  text-shadow: 2px 2px 0px var(--cyber-blue);
+  margin-bottom: 10px;
+  letter-spacing: clamp(3px, 1vw, 10px);
   font-weight: 900;
   animation: glitch 2s infinite;
+  text-align: center;
 }
 
 @keyframes glitch {
@@ -84,26 +105,42 @@ body {
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 15px;
-  width: 95%;
-  padding: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+  width: 100%;
+  max-width: 1000px;
+  padding: 10px;
+}
+
+@media (max-width: 767px) {
+  .grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+}
+
+@media (min-width: 768px) {
+  .grid {
+    grid-template-columns: repeat(5, 1fr);
+    gap: 15px;
+  }
 }
 
 .card {
   background: #000;
   border: 2px solid #333;
-  padding: 15px;
+  padding: clamp(8px, 2vw, 15px);
   cursor: pointer;
   transition: 0.2s;
   position: relative;
-  height: 110px;
+  min-height: 80px;
   display: flex;
   flex-direction: column;
   justify-content: center;
+  touch-action: manipulation;
 }
 
-.card:hover {
+.card:hover, .card:active {
   border-color: var(--b-color);
   background: #080808;
   box-shadow: 0 0 15px var(--b-color);
@@ -121,14 +158,14 @@ body {
 }
 
 .beast-name {
-  font-size: 1.1rem;
+  font-size: clamp(0.8rem, 2.5vw, 1.1rem);
   font-weight: 900;
   color: #fff;
 }
 
 .beast-type {
-  font-size: 0.6rem;
-  letter-spacing: 2px;
+  font-size: clamp(0.5rem, 1.5vw, 0.6rem);
+  letter-spacing: 1px;
   color: var(--b-color);
   font-weight: bold;
 }
@@ -147,6 +184,8 @@ body {
   display: none;
   flex: 1;
   flex-direction: column;
+  width: 100%;
+  height: 100%;
 }
 
 #arena-bg {
@@ -160,24 +199,37 @@ body {
               repeating-linear-gradient(0deg, transparent 0, transparent 1px, rgba(0, 243, 255, 0.1) 1px, transparent 2px) 0 0 / 100% 40px,
               repeating-linear-gradient(90deg, transparent 0, transparent 1px, rgba(0, 243, 255, 0.1) 1px, transparent 2px) 0 0 / 40px 100%;
   perspective: 500px;
+  padding: 10px;
 }
 
 .hud-top {
-  height: 120px;
+  height: auto;
+  min-height: 80px;
   display: flex;
   justify-content: space-between;
-  padding: 20px 40px;
+  padding: clamp(10px, 2vw, 20px);
+  gap: 10px;
   background: #080808;
   border-bottom: 2px solid #333;
   z-index: 10;
 }
 
+@media (max-width: 767px) {
+  .hud-top {
+    flex-direction: column;
+    padding: 10px;
+  }
+  .hud-top > div {
+    width: 100% !important;
+  }
+}
+
 .hp-rail {
   width: 100%;
-  height: 24px;
+  height: clamp(16px, 3vw, 24px);
   background: #111;
   border: 2px solid #444;
-  margin-top: 10px;
+  margin-top: 8px;
   position: relative;
 }
 
@@ -190,22 +242,22 @@ body {
 }
 
 .hp-val-text {
-  font-size: 0.8rem;
+  font-size: clamp(0.6rem, 1.5vw, 0.8rem);
   color: #888;
-  margin-top: 6px;
+  margin-top: 4px;
   letter-spacing: 1px;
   font-weight: bold;
 }
 
 .sprite {
-  width: 180px;
-  height: 180px;
+  width: clamp(100px, 20vw, 180px);
+  height: clamp(100px, 20vw, 180px);
   border: 2px solid var(--cyber-blue);
   background: rgba(0,0,0,0.7);
   display: flex;
   justify-content: center;
   align-items: center;
-  font-size: 5rem;
+  font-size: clamp(3rem, 8vw, 5rem);
   font-weight: 900;
   color: #fff;
   text-shadow: 0 0 15px var(--cyber-blue);
@@ -230,20 +282,38 @@ body {
 }
 
 #control-panel {
-  height: 250px;
+  height: auto;
+  min-height: 200px;
   background: #000;
   display: flex;
   border-top: 2px solid #333;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 767px) {
+  #control-panel {
+    flex-direction: column;
+    min-height: auto;
+  }
 }
 
 #console {
   width: 35%;
-  padding: 20px;
+  min-width: 200px;
+  padding: clamp(10px, 2vw, 20px);
   border-right: 1px solid #333;
-  font-size: 0.8rem;
+  font-size: clamp(0.6rem, 1.5vw, 0.8rem);
   color: #aaa;
   display: flex;
   flex-direction: column;
+}
+
+@media (max-width: 767px) {
+  #console {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid #333;
+  }
 }
 
 .data-val {
@@ -253,10 +323,11 @@ body {
 
 #move-grid {
   flex: 1;
-  padding: 20px;
+  padding: clamp(10px, 2vw, 20px);
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 15px;
+  gap: clamp(8px, 2vw, 15px);
+  min-width: 250px;
 }
 
 .move-btn {
@@ -266,6 +337,10 @@ body {
   cursor: pointer;
   font-weight: 900;
   font-family: 'Courier New';
+  padding: clamp(8px, 2vw, 12px);
+  font-size: clamp(0.7rem, 1.5vw, 0.9rem);
+  touch-action: manipulation;
+  min-height: 40px;
 }
 
 .move-btn.selected {
@@ -276,10 +351,10 @@ body {
 
 #exec-trigger {
   position: absolute;
-  bottom: 265px;
+  bottom: clamp(200px, 25vh, 265px);
   left: 50%;
   transform: translateX(-50%);
-  padding: 15px 40px;
+  padding: clamp(10px, 2vw, 15px) clamp(20px, 4vw, 40px);
   background: #f00;
   color: #000;
   border: none;
@@ -288,25 +363,28 @@ body {
   display: none;
   z-index: 20;
   clip-path: polygon(10% 0, 100% 0, 100% 70%, 90% 100%, 0 100%, 0 30%);
+  font-size: clamp(0.8rem, 2vw, 1rem);
+  touch-action: manipulation;
 }
 
 #ticker {
   position: absolute;
-  top: 150px;
+  top: clamp(80px, 15vh, 150px);
   left: 50%;
   transform: translateX(-50%);
   font-weight: 900;
   z-index: 50;
-  font-size: 3rem;
+  font-size: clamp(1.5rem, 5vw, 3rem);
   pointer-events: none;
   text-align: center;
-  width: 100%;
+  width: 90%;
+  max-width: 800px;
 }
 
 .crit-text {
   color: #f00;
-  border: 4px solid #f00;
-  padding: 10px 20px;
+  border: clamp(2px, 0.5vw, 4px) solid #f00;
+  padding: clamp(5px, 1vw, 10px) clamp(10px, 2vw, 20px);
   background: rgba(0,0,0,0.8);
   transform: rotate(-5deg);
   display: inline-block;
@@ -324,19 +402,38 @@ body {
 
 #back-btn {
   position: absolute;
-  top: 20px;
-  left: 20px;
+  top: clamp(10px, 2vw, 20px);
+  left: clamp(10px, 2vw, 20px);
   background: #000;
   color: var(--cyber-blue);
   border: 2px solid var(--cyber-blue);
-  padding: 10px 20px;
+  padding: clamp(8px, 1.5vw, 10px) clamp(15px, 2vw, 20px);
   cursor: pointer;
   font-family: 'Courier New';
   font-weight: 900;
   z-index: 200;
+  font-size: clamp(0.7rem, 1.5vw, 0.9rem);
+  touch-action: manipulation;
 }
 
-#back-btn:hover {
+#back-btn:hover, #back-btn:active {
   background: var(--cyber-blue);
   color: #000;
+}
+
+/* Mobile-specific adjustments */
+@media (max-width: 767px) {
+  body {
+    overflow-y: auto;
+  }
+  
+  #game-window {
+    min-height: 100vh;
+  }
+  
+  #arena-bg {
+    flex-direction: column;
+    gap: 20px;
+    padding: 20px 10px;
+  }
 }
