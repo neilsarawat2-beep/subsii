@@ -128,7 +128,20 @@ letter-spacing: 3px;
 <button class="mode-btn online" onclick="location.href='online.html'">ONLINE MULTIPLAYER</button>
 <button class="mode-btn tower" onclick="location.href='tower.html'">TOWER MODE (SURVIVAL)</button>
 <button class="mode-btn"
-style="border-color:#9d00ff; color:#9d00ff;"
+style="
+  border-color:#9d00ff;
+  color:#9d00ff;
+"
+onmouseover="
+  this.style.background='#9d00ff';
+  this.style.color='#000';
+  this.style.boxShadow='0 0 20px #9d00ff';
+"
+onmouseout="
+  this.style.background='#000';
+  this.style.color='#9d00ff';
+  this.style.boxShadow='none';
+"
 onclick="location.href='archive.html'">
 ARCHIVE / GUIDE
 </button>
