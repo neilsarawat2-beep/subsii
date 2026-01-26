@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SUBSI KI JANG // OFFICIAL ARCHIVE</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+
+<style>
+:root{
+    --bg:#050505;
+    --glass:rgba(255,255,255,0.04);
+    --border:rgba(255,255,255,0.12);
+}
+
+*{box-sizing:border-box}
+
+body{
+    margin:0;
+    height:100vh;
+    font-family:'Share Tech Mono', monospace;
+    color:#fff;
+    background:
+      radial-gradient(circle at center,#111 0%,#000 70%),
+      repeating-linear-gradient(
+        45deg,
+        rgba(255,255,255,0.02),
+        rgba(255,255,255,0.02) 1px,
+        transparent 1px,
+        transparent 60px
+      );
+    overflow:hidden;
+}
+
+/* HOME */
+#home{
+    height:100vh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+}
+
+.logo{
+    font-family:'Orbitron';
+    font-size:4.5rem;
+    font-weight:900;
+    letter-spacing:18px;
+    margin-bottom:10px;
+    text-shadow:0 0 30px rgba(255,255,255,0.2);
+}
+
+.sub{
+    font-size:0.8rem;
+    letter-spacing:6px;
+    color:#555;
+    margin-bottom:60px;
+}
+
+.menu{
+    display:flex;
+    gap:30px;
+}
+
+.hex{
+    width:200px;
+    height:200px;
+    background:var(--glass);
+    clip-path:polygon(25% 0%,75% 0%,100% 50%,75% 100%,25% 100%,0% 50%);
+    border:1px solid var(--border);
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    align-items:center;
+    cursor:pointer;
+    transition:0.4s;
+    font-family:'Orbitron';
+}
+
+.hex span{
+    font-size:0.7rem;
+    color:#777;
+}
+
+.hex strong{
+    margin-top:5px;
+    letter-spacing:2px;
+}
+
+.hex:hover{
+    transform:scale(1.12) rotate(3deg);
+    background:rgba(255,255,255,0.08);
+}
+
+/* VIEWER */
+#viewer{
+    display:none;
+    flex-direction:column;
+    height:100vh;
+}
+
+.header{
+    padding:25px 50px;
+    border-bottom:1px solid #222;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+}
+
+.exit{
+    background:none;
+    border:1px solid #ff0055;
+    color:#ff0055;
+    padding:8px 20px;
+    cursor:pointer;
+    font-family:'Orbitron';
+}
+
+.exit:hover{
+    background:#ff0055;
+    color:#000;
+}
+
+.title{
+    font-family:'Orbitron';
+    letter-spacing:8px;
+    font-weight:900;
+}
+
+.scroll{
+    flex:1;
+    overflow-y:auto;
+    padding:50px;
+}
+
+.grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(380px,1fr));
+    gap:30px;
+}
+
+.card{
+    background:#0a0a0a;
+    border:1px solid #1c1c1c;
+    padding:30px;
+    position:relative;
+}
+
+.card h2{
+    font-family:'Orbitron';
+    margin:0 0 10px 0;
+}
+
+.hp{
+    font-weight:900;
+    opacity:0.8;
+}
+
+.move{
+    margin-top:15px;
+    padding:12px;
+    background:rgba(255,255,255,0.03);
+    border-left:5px solid var(--c);
+}
+
+.move-name{
+    display:flex;
+    justify-content:space-between;
+    font-weight:bold;
+}
+
+.desc{
+    font-size:0.8rem;
+    color:#888;
+    margin-top:5px;
+}
+
+.small{
+    font-size:0.65rem;
+    color:#555;
+}
+</style>
+</head>
+
+<body>
+
+<div id="home">
+    <div class="logo">ARCHIVE</div>
+    <div class="sub">SUBSI KI JANG // OFFICIAL GUIDE</div>
+
+    <div class="menu">
+        <div class="hex" onclick="openView('beasts')"><span>ACCESS</span><strong>BEASTS</strong></div>
+        <div class="hex" onclick="openView('trainers')"><span>INTEL</span><strong>TRAINERS</strong></div>
+        <div class="hex" onclick="openView('items')"><span>CARGO</span><strong>ITEMS</strong></div>
+        <div class="hex" onclick="openView('effects')"><span>LOGIC</span><strong>EFFECTS</strong></div>
+        <div class="hex" onclick="openView('how')"><span>GUIDE</span><strong>HOW TO PLAY</strong></div>
+    </div>
+</div>
+
+<div id="viewer">
+    <div class="header">
+        <button class="exit" onclick="closeView()">[ DISCONNECT ]</button>
+        <div class="title" id="viewTitle"></div>
+        <div style="width:100px"></div>
+    </div>
+    <div class="scroll">
+        <div class="grid" id="grid"></div>
+    </div>
+</div>
+
+<script>
+const data = {
+
+beasts:[
+{n:"Paricheymon",c:"#00d2ff",hp:40,m:[
+["Water Pump","5 DMG","Focused water blast.",80],
+["Bald Shine","STUN","2-turn stun.",70],
+["Kick Run","2–4 DMG","Agile strike.",100],
+["Quick Dodge","EVA","50% miss chance.",80]
+]},
+{n:"Debosmitamon",c:"#39ff14",hp:42,m:[
+["Membrane","SHIELD","Blocks 3 hits.",100],
+["Root Hold","2–4 DMG","Vine crush.",100],
+["Pollen Burst","6 DMG","High power.",50],
+["Quick Dodge","EVA","Reposition.",50]
+]},
+{n:"Smitimon",c:"#ff5e00",hp:38,m:[
+["Roll No.1","LEECH","Drain 3 HP.",60],
+["SEA","3 DMG","Heat pulse.",100],
+["Padhai Mat","WEAK","Enemy dmg halved.",60],
+["Quick Dodge","EVA","Heat dash.",50]
+]},
+{n:"Swatimon",c:"#bc13fe",hp:44,m:[
+["Wisdom","SPEC","50% enemy HP if higher.",90],
+["Irony","SWAP","Swap HP pools.",100],
+["Pause","STUN","2 turns.",50],
+["Metaphor","3 DMG","Logic hit.",100]
+]},
+{n:"GarimaJmon",c:"#ff0055",hp:47,m:[
+["Wrath","SPEC","Enemy set to 1 HP.",20],
+["Totalitarian","STUN","Absolute lock.",50],
+["Bratt!","4 DMG","Sonic force.",100],
+["Escapism","EVA","Phase escape.",60]
+]}
+],
+
+trainers:[
+["Kashmiri Adya","PATHER FEKH","Enemy takes 1 recoil damage on hit.","#ff9933"],
+["Bengali Noel","KAALA JAADU","Enemy bleeds 2 HP every turn after first hit.","#ff0099"],
+["Milky Shubhan","DUDH","Grants +1 heal potion.","#00ccff"],
+["Gitthi Naysha","JUDGE","Opponent cannot use HP or Antidote.","#ffd700"],
+["Kaala Uday","ANDHERA","Enemy special accuracy −15%.","#9933ff"],
+["Fatima Chahak","MAKSAD","+2 DMG & +10% ACC on special moves.","#00ff00"],
+["Bihari Rishit","CHOR","Steals 1 random item at start.","#ff6600"],
+["Janwar Neil","BHUKAD","Gives 2 backup revives.","#4b0082"],
+["Khamba Aayansh","RAGEBAIT","Extra buff after revive.","#808080"],
+["Brat Advik","OVERCONFIDENCE","20% dodge vs specials.","#ff4500"]
+],
+
+items:[
+["HP Potion","Restores 7 HP."],
+["Antidote","Removes Bleed, Weak, Stun."],
+["Buff Potion","+3 DMG & +10% ACC for 1 turn."],
+["Backup Protocol","Revive at 5 HP (then 3 HP)."]
+],
+
+effects:[
+["STUN","Skip turn."],
+["SHIELD","Blocks 3 attacks."],
+["BLEED","Lose HP each turn."],
+["WEAK","Deal 50% damage."],
+["EVA","50% dodge chance."],
+["LEECH","Heal based on damage."]
+]
+
+};
+
+function openView(k){
+document.getElementById("home").style.display="none";
+document.getElementById("viewer").style.display="flex";
+document.getElementById("viewTitle").innerText=k.toUpperCase();
+const g=document.getElementById("grid");
+g.innerHTML="";
+
+if(k==="beasts"){
+data.beasts.forEach(b=>{
+g.innerHTML+=`
+<div class="card" style="border-top:5px solid ${b.c}">
+<h2>${b.n}</h2>
+<div class="hp">${b.hp} HP</div>
+${b.m.map(m=>`
+<div class="move" style="--c:${b.c}">
+<div class="move-name"><span>${m[0]}</span><span>${m[1]}</span></div>
+<div class="small">ACC ${m[3]}%</div>
+<div class="desc">${m[2]}</div>
+</div>`).join("")}
+</div>`;
+});
+}
+
+if(k==="trainers"){
+data.trainers.forEach(t=>{
+g.innerHTML+=`
+<div class="card" style="border-top:5px solid ${t[3]}">
+<h2>${t[0]}</h2>
+<div class="desc"><b>${t[1]}</b> — ${t[2]}</div>
+</div>`;
+});
+}
+
+if(k==="items"||k==="effects"){
+data[k].forEach(i=>{
+g.innerHTML+=`
+<div class="card">
+<h2>${i[0]}</h2>
+<div class="desc">${i[1]}</div>
+</div>`;
+});
+}
+
+if(k==="how"){
+g.innerHTML=`
+<div class="card">
+<h2>HOW TO PLAY</h2>
+<div class="desc">
+Choose a Beast → Choose a Trainer → Take turns using Moves or Items.<br><br>
+• Defeat enemy by reducing HP to 0<br>
+• Backup revives once or twice<br>
+• Status effects stack strategically<br>
+• Tower Mode gets harder every floor<br><br>
+Some entities are not recorded in this archive.
+</div>
+</div>`;
+}
+}
+
+function closeView(){
+document.getElementById("viewer").style.display="none";
+document.getElementById("home").style.display="flex";
+}
+</script>
+
+</body>
+</html>
