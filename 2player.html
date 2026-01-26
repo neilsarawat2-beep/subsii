@@ -2,196 +2,432 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Subsi Ki Jang — 2 Player Versus</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<!-- Shared Styles -->
-<link rel="stylesheet" href="shared.css">
-
-<style>
-/* minimal extra for 2P flow */
-.turn-indicator {
-  margin-top: 10px;
-  font-size: 0.9rem;
-  letter-spacing: 3px;
-  color: var(--cyber-blue);
-}
-.random-card {
-  border: 2px dashed var(--cyber-blue) !important;
-  animation: pulse 1.5s infinite;
-}
-</style>
+<title>Subsi ki Jang - 2 Player Mode</title>
+<link rel="stylesheet" href="game-styles.css">
 </head>
-
 <body>
 <div id="crt-overlay"></div>
-
 <div id="game-window">
+<button id="back-btn" onclick="location.href='index.html'">← BACK TO MENU</button>
 
-<button id="back-btn" onclick="location.href='index.html'">BACK</button>
-
-<!-- SELECTION SCREEN -->
 <div id="selection-screen">
-  <h1>2 PLAYER MODE</h1>
-  <div class="turn-indicator" id="turnText"></div>
-
-  <div class="grid" id="selectionGrid"></div>
+<h1>2 PLAYER MODE</h1>
+<div id="sel-hint" style="color:#555; letter-spacing:4px; margin-bottom:10px;">[ PLAYER 1 - SELECT YOUR UNIT ]</div>
+<div class="grid" id="roster"></div>
 </div>
 
-<!-- BATTLE SCREEN (reuses same structure as 1P) -->
 <div id="battle-screen">
-  <!-- you already have full battle logic elsewhere -->
+<div id="ticker"></div>
+<div class="hud-top">
+<div style="width: 45%;">
+<div style="display:flex; justify-content:space-between; align-items:flex-end;">
+<span id="p1-n" style="font-weight:900; font-size: 1.4rem;"></span>
+<span id="p1-sh" style="color:var(--cyber-blue); font-size:0.8rem;"></span>
+</div>
+<div class="hp-rail"><div id="p1-bar" class="hp-bar"></div></div>
+<div id="p1-hp-num" class="hp-val-text">CORE: --/--</div>
+<div id="p1-status" style="font-size:0.6rem; color:#f00; margin-top:2px; min-height:10px;"></div>
+<div id="p1-trainer" style="font-size:0.7rem; color:var(--cyber-blue); margin-top:2px;">TR: ---</div>
+</div>
+<div style="width: 45%; text-align: right;">
+<div style="display:flex; justify-content:space-between; align-items:flex-end;">
+<span id="p2-sh" style="color:var(--cyber-blue); font-size:0.8rem;"></span>
+<span id="p2-n" style="font-weight:900; font-size: 1.4rem;"></span>
+</div>
+<div class="hp-rail" style="direction: rtl;"><div id="p2-bar" class="hp-bar"></div></div>
+<div id="p2-hp-num" class="hp-val-text">CORE: --/--</div>
+<div id="p2-status" style="font-size:0.6rem; color:#f00; margin-top:2px; min-height:10px;"></div>
+<div id="p2-trainer" style="font-size:0.7rem; color:var(--cyber-blue); margin-top:2px;">TR: ---</div>
+</div>
+</div>
+<div id="arena-bg"><div id="s1" class="sprite"></div><div id="s2" class="sprite"></div></div>
+<button id="exec-trigger" onclick="handleAction()">INITIATE STRIKE</button>
+<div id="control-panel">
+<div id="console">
+<div style="color:var(--cyber-blue); font-weight:900; border-bottom: 1px solid #333; margin-bottom:10px;">>> TACTICAL READOUT</div>
+<div>MODULE: <span id="c-title" class="data-val">---</span></div>
+<div>ACCURACY: <span id="c-acc" class="data-val">---</span></div>
+<div style="color:var(--term-red)">EST DAMAGE: <span id="c-dmg" class="data-val">---</span></div>
+<div id="c-desc" style="color:#666; font-size:0.7rem; margin-top: auto;">// AWAITING MODULE...</div>
+</div>
+<div id="move-grid">
+<button class="move-btn" id="cat-att" onclick="showSub('ATTACK')">ATTACK SET</button>
+<button class="move-btn" id="cat-itm" onclick="showSub('ITEMS')">ITEM POUCH</button>
+<button class="move-btn" id="b0" style="display:none;"></button>
+<button class="move-btn" id="b1" style="display:none;"></button>
+<button class="move-btn" id="b2" style="display:none;"></button>
+<button class="move-btn" id="b3" style="display:none;"></button>
+</div>
+</div>
+</div>
 </div>
 
-</div>
-
-<!-- Shared Game Data -->
 <script src="game-data.js"></script>
-
 <script>
-/* ===============================
-   2 PLAYER HOT-SEAT LOGIC
-================================ */
+let p1, p2, turn = 1, curM, selectionPhase = 0;
 
-let phase = "P1_BEAST"; 
-let p1 = { beast:null, trainer:null };
-let p2 = { beast:null, trainer:null };
+window.onload = () => {
+  document.getElementById('sel-hint').innerText = "[ PLAYER 1 - SELECT YOUR UNIT ]";
+  loadBeasts();
+};
 
-const grid = document.getElementById("selectionGrid");
-const turnText = document.getElementById("turnText");
-
-/* ---------- helpers ---------- */
-
-function isForbiddenRoll() {
-  return Math.random() < 0.10; // 🔥 10% chance
-}
-
-function clearGrid() {
-  grid.innerHTML = "";
-}
-
-function card(name, sub, color, onclick, isRandom=false) {
-  const d = document.createElement("div");
-  d.className = "card" + (isRandom ? " random-card" : "");
-  d.style.setProperty("--b-color", color || "var(--cyber-blue)");
-  d.innerHTML = `
-    <div class="beast-name">${name}</div>
-    <div class="beast-type">${sub}</div>
-  `;
-  d.onclick = onclick;
-  grid.appendChild(d);
-}
-
-/* ---------- RENDER PHASES ---------- */
-
-function renderBeastSelect(player) {
-  clearGrid();
-  turnText.textContent = `${player} — SELECT BEAST`;
-
-  Object.keys(db).forEach(b => {
-    if (b === "Vibhamon") return; // 🔒 hidden from manual pick
-    card(b, db[b].type, db[b].color, () => selectBeast(player, b));
+function loadBeasts() {
+  const r = document.getElementById('roster');
+  r.innerHTML = "";
+  let pool = Object.keys(db).filter(n => n !== "Vibhamon");
+  pool.forEach(n => {
+    r.innerHTML += `<div class="card" onclick="pick('${n}')" style="--b-color:${db[n].color}"><div class="beast-name">${n}</div><div class="beast-type">${db[n].type}</div></div>`;
   });
-
-  card("RANDOM", "???", null, () => randomBeast(player), true);
+  r.innerHTML += `<div class="card random-card" onclick="pickRandom()" style="--b-color:var(--cyber-blue)"><div class="beast-name">? ? ?</div><div class="beast-type">RANDOM (10% LEGENDARY)</div></div>`;
 }
 
-function renderTrainerSelect(player) {
-  clearGrid();
-  turnText.textContent = `${player} — SELECT TRAINER`;
-
-  Object.keys(trainers).forEach(t => {
-    if (t === "Lord Keshav") return; // 🔒 hidden from manual pick
-    card(t, trainers[t].name, trainers[t].c, () => selectTrainer(player, t));
+function loadTrainers() {
+  const r = document.getElementById('roster');
+  r.innerHTML = "";
+  Object.keys(trainers).forEach(n => {
+    if(n === "Lord Keshav") return;
+    r.innerHTML += `<div class="card" onclick="pickTrainer('${n}')" style="--b-color:${trainers[n].c}"><div class="beast-name">${n}</div><div class="beast-type" style="color:#fff; margin-bottom: 2px;">${trainers[n].name}</div><div style="font-size:0.5rem; color:#aaa; line-height:1;">${trainers[n].d}</div></div>`;
   });
-
-  card("RANDOM", "???", null, () => randomTrainer(player), true);
+  r.innerHTML += `<div class="card random-card" onclick="pickRandomTrainer()" style="--b-color:var(--cyber-blue)"><div class="beast-name">? ? ?</div><div class="beast-type">RANDOM (10% GOD)</div></div>`;
 }
 
-/* ---------- SELECTION ACTIONS ---------- */
-
-function selectBeast(player, beast) {
-  (player === "P1" ? p1 : p2).beast = beast;
-  advance();
+function pickRandom() {
+  let k = Object.keys(db).filter(n => n !== "Vibhamon");
+  let chosen;
+  
+  // 10% chance to get Vibhamon
+  if(Math.random() < 0.1) {
+    chosen = "Vibhamon";
+    const t = document.getElementById('ticker');
+    t.innerHTML = `<div class='crit-text' style='color:#ff0000; border-color:#ff0000; font-size:2rem'>LEGENDARY PULL!</div>`;
+    setTimeout(() => { t.innerHTML = ""; }, 2000);
+  } else {
+    chosen = k[Math.floor(Math.random()*k.length)];
+  }
+  
+  pick(chosen);
 }
 
-function selectTrainer(player, trainer) {
-  (player === "P1" ? p1 : p2).trainer = trainer;
-  advance();
+function pickRandomTrainer() {
+  let k = Object.keys(trainers).filter(n => n !== "Lord Keshav");
+  let chosen;
+  
+  // 10% chance to get Lord Keshav
+  if(Math.random() < 0.1) {
+    chosen = "Lord Keshav";
+    const t = document.getElementById('ticker');
+    t.innerHTML = `<div class='crit-text' style='color:#ffffff; border-color:#ffffff; font-size:2rem'>GOD TIER PULL!</div>`;
+    setTimeout(() => { t.innerHTML = ""; }, 2000);
+  } else {
+    chosen = k[Math.floor(Math.random()*k.length)];
+  }
+  
+  pickTrainer(chosen);
 }
 
-/* ---------- RANDOM LOGIC (🔥 SPECIAL) ---------- */
-
-function randomBeast(player) {
-  const lucky = isForbiddenRoll();
-
-  const pool = lucky
-    ? Object.keys(db) // includes Vibhamon
-    : Object.keys(db).filter(b => b !== "Vibhamon");
-
-  const pick = pool[Math.floor(Math.random() * pool.length)];
-  (player === "P1" ? p1 : p2).beast = pick;
-
-  advance();
-}
-
-function randomTrainer(player) {
-  const lucky = isForbiddenRoll();
-
-  const pool = lucky
-    ? Object.keys(trainers) // includes Lord Keshav
-    : Object.keys(trainers).filter(t => t !== "Lord Keshav");
-
-  const pick = pool[Math.floor(Math.random() * pool.length)];
-  (player === "P1" ? p1 : p2).trainer = pick;
-
-  advance();
-}
-
-/* ---------- FLOW CONTROL ---------- */
-
-function advance() {
-  switch (phase) {
-    case "P1_BEAST":
-      phase = "P2_BEAST";
-      renderBeastSelect("P2");
-      break;
-
-    case "P2_BEAST":
-      phase = "P1_TRAINER";
-      renderTrainerSelect("P1");
-      break;
-
-    case "P1_TRAINER":
-      phase = "P2_TRAINER";
-      renderTrainerSelect("P2");
-      break;
-
-    case "P2_TRAINER":
-      startBattle();
-      break;
+function pick(n) {
+  let p = {...db[n], n, cur:db[n].hp, stun:0, bleed:0, weak:0, shield:0, shieldLock:false, buff:0, accMod:0, evasion:0, used:[], lastMoveName: null, revived:0, hasDealtDmg: false, items:{HP:1,ANTI:1,BUFF:1,BKUP:1}, trainer: null, trId: null};
+  if(!p1) {
+    p1 = p;
+    document.getElementById('sel-hint').innerText = "[ PLAYER 2 - SELECT YOUR UNIT ]";
+  } else {
+    p2 = p;
+    selectionPhase = 1;
+    document.getElementById('sel-hint').innerText = "[ PLAYER 1 - SELECT YOUR TRAINER ]";
+    loadTrainers();
   }
 }
 
-/* ---------- START ---------- */
-
-function startBattle() {
-  console.log("P1:", p1);
-  console.log("P2:", p2);
-
-  document.getElementById("selection-screen").style.display = "none";
-  document.getElementById("battle-screen").style.display = "flex";
-
-  /*
-    Hook this into your existing battle engine:
-    initBattle(p1, p2, { mode: "2P" });
-  */
+function pickTrainer(n) {
+  const tr = trainers[n];
+  if(selectionPhase === 1) {
+    p1.trainer = n;
+    p1.trId = tr.id;
+    p1.trColor = tr.c;
+    selectionPhase = 2;
+    document.getElementById('sel-hint').innerText = "[ PLAYER 2 - SELECT YOUR TRAINER ]";
+  } else if(selectionPhase === 2) {
+    p2.trainer = n;
+    p2.trId = tr.id;
+    p2.trColor = tr.c;
+    launch();
+  }
 }
 
-/* ---------- INIT ---------- */
+function launch() {
+  document.getElementById('selection-screen').style.display = 'none';
+  document.getElementById('battle-screen').style.display = 'flex';
+  init();
+}
 
-renderBeastSelect("P1");
+function init() {
+  [p1, p2].forEach(p => {
+    if(p.trId === "SHUBHAN") p.items.HP += 1;
+    if(p.trId === "NEIL") p.items.BKUP = 2;
+  });
+  setupVisuals();
+}
 
+function setupVisuals() {
+  document.getElementById('p1-n').innerText = p1.n;
+  document.getElementById('p1-n').style.color = p1.color;
+  document.getElementById('p2-n').innerText = p2.n;
+  document.getElementById('p2-n').style.color = p2.color;
+  document.getElementById('s1').innerText = p1.n[0];
+  document.getElementById('s2').innerText = p2.n[0];
+  document.getElementById('s1').style.setProperty('--b-color', p1.color);
+  document.getElementById('s2').style.setProperty('--b-color', p2.color);
+  update();
+  
+  let thiefMsg = "";
+  if(p1.trId === "RISHIT") thiefMsg += stealItem(p1, p2, "P1");
+  if(p2.trId === "RISHIT") thiefMsg += stealItem(p2, p1, "P2");
+  if(thiefMsg) {
+    const t = document.getElementById('ticker');
+    t.innerHTML = `<div class='crit-text' style='color:#ff6600; font-size:1.2rem'>${thiefMsg}</div>`;
+    setTimeout(() => { t.innerHTML = ""; showMain(); }, 2500);
+  } else {
+    showMain();
+  }
+}
+
+function stealItem(thief, victim, tag) {
+  const avail = Object.keys(victim.items).filter(k => victim.items[k] > 0);
+  if(avail.length > 0) {
+    const s = avail[Math.floor(Math.random() * avail.length)];
+    victim.items[s]--;
+    thief.items[s]++;
+    return `${tag} CHOR STOLE ${s.replace('_',' ')}! `;
+  }
+  return "";
+}
+
+function update() {
+  [p1,p2].forEach((p,i)=>{
+    let id=i+1;
+    document.getElementById(`p${id}-bar`).style.width=(Math.max(0,p.cur)/p.hp*100)+"%";
+    document.getElementById(`p${id}-bar`).style.setProperty('--b-color', p.color);
+    document.getElementById(`p${id}-hp-num`).innerText=`CORE: ${Math.max(0,Math.floor(p.cur))}/${p.hp}`;
+    document.getElementById(`p${id}-sh`).innerText = p.shield > 0 ? `SHIELD:${p.shield}` : (p.shieldLock ? "[LOCK]" : "");
+    let st = [];
+    if(p.bleed > 0) st.push(`BLEED(${p.bleed})`);
+    if(p.weak > 0) st.push(`WEAK(${p.weak})`);
+    if(p.buff > 0) st.push("BUFFED");
+    if(p.evasion > 0) st.push("EVA");
+    document.getElementById(`p${id}-status`).innerText = st.join(" | ");
+    const tr = document.getElementById(`p${id}-trainer`);
+    tr.innerText = `TR: ${p.trainer}`;
+    tr.style.color = p.trColor;
+  });
+}
+
+function showMain() {
+  document.getElementById('ticker').innerText = "";
+  document.getElementById('cat-att').style.display = 'block';
+  document.getElementById('cat-itm').style.display = 'block';
+  for(let i=0;i<4;i++) {
+    document.getElementById('b'+i).style.display='none';
+    document.getElementById('b'+i).classList.remove('selected');
+  }
+  document.getElementById('exec-trigger').style.display='none';
+  document.getElementById('s1').classList.toggle('active-sprite', turn===1);
+  document.getElementById('s2').classList.toggle('active-sprite', turn===2);
+}
+
+function showSub(m) {
+  document.getElementById('cat-att').style.display='none';
+  document.getElementById('cat-itm').style.display='none';
+  const a = turn===1?p1:p2;
+  const o = turn===1?p2:p1;
+  
+  if(m==='ATTACK') {
+    a.moves.forEach((mv,i)=>{
+      let b=document.getElementById('b'+i);
+      b.style.display='block';
+      b.innerText=mv.n;
+      b.disabled = (a.used.includes(mv.n) || (mv.t === "SHIELD" && a.shieldLock));
+      b.onclick=()=>prep(mv,i,false);
+    });
+  } else {
+    const itms=[{n:"HP POTION",t:"HP",v:a.items.HP,d:"+7 HP"},{n:"ANTI",t:"ANTI",v:a.items.ANTI,d:"Clear status"},{n:"BUFF",t:"BUFF",v:a.items.BUFF,d:"+3 DMG & +10% ACC"},{n:"BACKUP",t:"BKUP",v:a.items.BKUP,d:"Revive Life"}];
+    itms.forEach((it,i)=>{
+      let b=document.getElementById('b'+i);
+      b.style.display='block';
+      b.innerText=`${it.n}(${it.v})`;
+      b.disabled = (it.v<=0 || (o.trId === "NAYSHA" && (it.t === "HP" || it.t === "ANTI")));
+      b.onclick=()=>prep(it,i,true);
+    });
+  }
+}
+
+function prep(m,i,isItm) {
+  const a = turn===1?p1:p2;
+  const o = turn===1?p2:p1;
+  curM = {...m, isItem:isItm};
+  
+  for(let j=0;j<4;j++) document.getElementById('b'+j).classList.remove('selected');
+  if(i !== -1) document.getElementById('b'+i).classList.add('selected');
+  
+  document.getElementById('c-title').innerText=m.n;
+  
+  let acc = m.p || 100;
+  let mods = a.accMod;
+  const isSp = (m.t === "DMG" || m.t === "RAND_DMG" || m.t === "STUN" || m.t === "SILENCE");
+  
+  if(!isItm && o.trId === "UDAY" && isSp && m.t !== "WIS" && m.t !== "SHIELD") mods -= 15;
+  if(!isItm && a.trId === "CHAHAK" && isSp) mods += 10;
+  if(!isItm && o.trId === "KESHAV" && isSp && m.t !== "WIS" && m.t !== "SHIELD") mods -= 15;
+  if(!isItm && a.trId === "KESHAV" && isSp) mods += 10;
+  
+  document.getElementById('c-acc').innerText=(isItm ? 100 : Math.min(100, acc + mods)) + "%";
+  
+  let d = m.val || "EFF";
+  if(m.t === "RISK") d = 10;
+  if(a.trId === "CHAHAK" && isSp && !isNaN(d)) d = parseInt(d)+2;
+  if(a.trId === "KESHAV" && isSp && !isNaN(d)) d = parseInt(d)+2;
+  
+  document.getElementById('c-dmg').innerText=d;
+  document.getElementById('c-desc').innerText=`// ${m.d||"Active"}`;
+  
+  document.getElementById('exec-trigger').style.display='block';
+}
+
+function handleAction() {
+  const att=turn===1?p1:p2;
+  const def=turn===1?p2:p1;
+  const t=document.getElementById('ticker');
+  const sDef=document.getElementById(turn===1?'s2':'s1');
+  
+  document.getElementById('exec-trigger').style.display='none';
+  
+  let msg = "";
+  
+  if(curM.isItem) {
+    if(curM.t==='HP') att.cur=Math.min(att.hp, att.cur+7);
+    if(curM.t==='ANTI') { att.stun=0; att.bleed=0; att.weak=0; }
+    if(curM.t==='BUFF') { att.buff=3; att.accMod=10; }
+    att.items[curM.t]--;
+    t.innerHTML="<div class='crit-text' style='color:#0f0; border-color:#0f0'>[ FIXED ]</div>";
+  } else {
+    let hit = (curM.p || 100) + att.accMod;
+    const isSp = (curM.t === "DMG" || curM.t === "RAND_DMG" || curM.t === "STUN" || curM.t === "SILENCE" || curM.t === "PERCENT" || curM.t === "SPEECH_STUN");
+    
+    if(def.trId === "UDAY" && isSp && curM.t !== "WIS" && curM.t !== "SHIELD") hit -= 15;
+    if(att.trId === "CHAHAK" && isSp) hit += 10;
+    if(def.trId === "KESHAV" && isSp && curM.t !== "WIS" && curM.t !== "SHIELD") hit -= 15;
+    if(att.trId === "KESHAV" && isSp) hit += 10;
+    if(def.evasion > 0) { hit -= 50; def.evasion = 0; }
+    
+    let dodged = false;
+    if(def.trId === "ADVIK" && (isSp || att.buff > 0)) { if(Math.random() < 0.2) dodged = true; }
+    if(def.trId === "KESHAV" && (isSp || att.buff > 0)) { if(Math.random() < 0.2) dodged = true; }
+    
+    if(Math.random()*100 > hit || dodged) {
+      t.innerHTML = dodged ? "<div class='crit-text' style='color:#ff4500;'>[ DODGED ]</div>" : "<div class='crit-text' style='color:#888; border-color:#888'>[ MISSED ]</div>";
+      att.accMod = 0;
+    } else {
+      let d = (curM.val||0);
+      if(curM.t==="RAND_DMG") d = Math.floor(Math.random()*(curM.max-curM.min+1))+curM.min;
+      if(curM.t==="RISK") { att.cur = Math.max(1, att.cur - 8); d = 10; }
+      if(curM.t==="WIS") d = (def.cur > att.cur) ? Math.floor(def.cur / 2) : 0;
+      if(curM.t==="DS") d = (def.cur < (def.hp * 0.3)) ? def.cur : 2;
+      if(curM.t==="PERCENT") d = Math.floor(att.cur * 0.5);
+      if(curM.t==="SPEECH_STUN") { def.stun = 3; d = 0; }
+      if(curM.t==="HEAL") { att.cur = Math.min(att.hp, att.cur+3); d=0; msg="[ HEALED ]"; }
+      if(curM.t==="SWAP") { let tmp = att.cur; att.cur = def.cur; def.cur = tmp; d = 0; msg="[ SWAPPED ]"; }
+      if(curM.t==="BLEED" || curM.t==="BLEED_RAND") def.bleed = 3;
+      if(curM.t==="WEAK") def.weak = 3;
+      if(curM.t==="STUN" || curM.t==="SILENCE") def.stun = (curM.n === "Silence" || curM.n === "Intimidate" || curM.n === "Bald Shine") ? 1 : 2;
+      if(curM.t==="EVA") { att.evasion = 1; msg="[ EVASIVE ]"; }
+      
+      if(att.weak > 0 && d > 0) d = Math.floor(d/2);
+      if(att.trId === "CHAHAK" && isSp && d > 0) d += 2;
+      if(att.trId === "KESHAV" && isSp && d > 0) d += 2;
+      
+      if(def.shield > 0 && (d > 0 || curM.t === "WRATH")) {
+        if(att.buff > 0) {
+          def.shield = 0;
+          def.shieldLock = true;
+          msg = "<div class='crit-text' style='color:#ff00ea; border-color:#ff00ea'>[ BROKEN ]</div>";
+        } else if(curM.t === "WRATH" || curM.t === "RISK") {
+          def.shield = 0;
+          msg = "<div class='crit-text' style='color:#ff00ea; border-color:#ff00ea'>[ PIERCED ]</div>";
+        } else {
+          d = 0;
+          def.shield--;
+          msg = "<div class='crit-text' style='color:#00f3ff; border-color:#00f3ff'>[ BLOCKED ]</div>";
+        }
+      }
+      
+      if(att.buff > 0 && d > 0) { d += 3; if(!dodged) att.buff = 0; }
+      att.accMod = 0;
+      
+      if(curM.t==="WRATH") { def.cur=1; d=0; msg="[ WRATH ]"; }
+      if(curM.t==="LEECH") { att.cur = Math.min(att.hp, att.cur + d); }
+      if(curM.t==="SHIELD" && !att.shieldLock) { att.shield = 3; msg="[ SHIELD UP ]"; }
+      
+      def.cur=Math.max(0, def.cur-d);
+      if(d>0) { sDef.classList.add('shake'); att.hasDealtDmg = true; }
+      
+      if(def.trId === "ADYA" && (d >= 0)) { att.cur = Math.max(0, att.cur - 1); msg = msg ? msg + " + [RECOIL]" : "[ RECOIL ]"; }
+      if(def.trId === "KESHAV" && (d >= 0)) { att.cur = Math.max(0, att.cur - 1); msg = msg ? msg + " + [RECOIL]" : "[ RECOIL ]"; }
+      
+      t.innerHTML = msg || `<div class='crit-text'>-[ ${Math.floor(d)} ]</div>`;
+    }
+    
+    if(curM.once) att.used.push(curM.n);
+    att.lastMoveName = curM.n;
+  }
+  
+  update();
+  setTimeout(checkDeath, 1000);
+}
+
+function checkDeath() {
+  let dead = (p1.cur <= 0) ? p1 : (p2.cur <= 0 ? p2 : null);
+  if(dead) {
+    if(dead.items.BKUP > 0) {
+      dead.revived++;
+      let h = dead.revived === 1 ? 5 : 3;
+      dead.cur = h;
+      dead.items.BKUP--;
+      dead.bleed = 0;
+      dead.stun = 0;
+      if(dead.trId === "AAYANSH") { dead.buff = 3; dead.accMod = 10; }
+      if(dead.trId === "KESHAV") { dead.buff = 3; dead.accMod = 10; }
+      update();
+      document.getElementById('ticker').innerHTML = `<div class='crit-text' style='color:#0f0'>${dead.revived === 2 ? "HE IS STILL THERE" : "[ REBOOTING ]"}</div>`;
+      setTimeout(()=> endTurn(), 1200);
+    } else {
+      alert("SYSTEM FAILURE: " + (p1.cur > 0 ? p1.n : p2.n) + " WINS");
+      location.reload();
+    }
+  } else {
+    setTimeout(() => endTurn(), 800);
+  }
+}
+
+function endTurn() {
+  const c = turn===1?p1:p2, o = turn===1?p2:p1;
+  if(c.bleed > 0 && c.cur > 0) { c.cur = Math.max(0, c.cur-1); c.bleed--; }
+  if(c.trId === "NOEL" && c.hasDealtDmg) { o.cur = Math.max(0, o.cur - 2); }
+  if(c.trId === "KESHAV" && c.hasDealtDmg) { o.cur = Math.max(0, o.cur - 2); }
+  update();
+  if(p1.cur <= 0 || p2.cur <= 0) { checkDeath(); return; }
+  if(c.weak > 0) c.weak--;
+  turn=turn===1?2:1;
+  const n=turn===1?p1:p2;
+  document.querySelectorAll('.sprite').forEach(s=>s.classList.remove('shake'));
+  if(n.stun > 0) {
+    n.stun--;
+    update();
+    document.getElementById('ticker').innerHTML="<div class='crit-text' style='color:#f00'>[ STUNNED ]</div>";
+    setTimeout(() => endTurn(), 1000);
+  } else {
+    showMain();
+  }
+}
 </script>
 </body>
 </html>
