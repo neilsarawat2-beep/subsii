@@ -4,16 +4,514 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Subsi ki Jang - Tower Mode</title>
-<link rel="stylesheet" href="game-styles.css">
 <style>
-#dialog-box {position: absolute; inset: 0; z-index: 200; background: rgba(0,0,0,0.95); display: none; flex-direction: column; align-items: center; justify-content: center; padding: 20px;}
-#dialog-text {color: #fff; font-size: clamp(0.9rem, 2vw, 1.2rem); text-align: center; max-width: 800px; line-height: 1.8; margin-bottom: 20px; text-transform: none;}
-.dialog-btn {background: #000; color: var(--cyber-blue); border: 2px solid var(--cyber-blue); padding: clamp(10px, 2vw, 15px) clamp(20px, 3vw, 40px); cursor: pointer; font-family: 'Courier New'; font-weight: 900; margin: 5px; font-size: clamp(0.8rem, 1.8vw, 1.1rem); touch-action: manipulation;}
-.dialog-btn:hover {background: var(--cyber-blue); color: #000;}
-#tower-level-ind {position: absolute; top: 10px; left: 50%; transform: translateX(-50%); color: #fff; font-size: clamp(0.9rem, 2vw, 1.2rem); z-index: 20; text-shadow: 0 0 10px var(--cyber-blue); display: none;}
-#trader-screen {position: absolute; inset: 0; z-index: 90; background: rgba(0,0,0,0.95); display: none; flex-direction: column; align-items: center; justify-content: center; padding: 20px;}
-.trade-opt {border: 1px solid gold; color: gold; margin: 10px 0; padding: clamp(15px, 2vw, 20px); width: 90%; max-width: 300px; text-align: center; cursor: pointer; font-size: clamp(0.8rem, 1.8vw, 1rem); touch-action: manipulation;}
-.trade-opt:hover {background: gold; color: #000;}
+:root {
+  --term-green: #0f0;
+  --term-red: #f00;
+  --cyber-blue: #00f3ff;
+  --void: #050505;
+  --panel-bg: #0a0a0a;
+  --scan-line: rgba(0,0,0,0.5);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: #000;
+  color: #e0e0e0;
+  font-family: 'Courier New', monospace;
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+  text-transform: uppercase;
+  position: relative;
+}
+
+#crt-overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 999;
+  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%),
+              linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+  background-size: 100% 2px, 3px 100%;
+  animation: flicker 0.15s infinite;
+}
+
+@keyframes flicker {
+  0% { opacity: 0.97; }
+  100% { opacity: 1; }
+}
+
+#game-window {
+  width: 100vw;
+  height: 100vh;
+  max-width: 100%;
+  max-height: 100%;
+  background: var(--void);
+  border: none;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  box-shadow: none;
+  overflow: hidden;
+}
+
+@media (min-width: 768px) and (min-aspect-ratio: 4/3) {
+  #game-window {
+    width: 95vw;
+    height: 95vh;
+    max-width: 1200px;
+    max-height: 850px;
+    border: 1px solid #333;
+    box-shadow: 0 0 20px rgba(0,0,0,0.8);
+  }
+}
+
+#selection-screen {
+  position: absolute;
+  inset: 0;
+  z-index: 100;
+  background: #020202;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px;
+  overflow-y: auto;
+}
+
+#selection-screen h1 {
+  font-size: clamp(2rem, 8vw, 4rem);
+  color: #fff;
+  text-shadow: 2px 2px 0px var(--cyber-blue);
+  margin-bottom: 10px;
+  letter-spacing: clamp(3px, 1vw, 10px);
+  font-weight: 900;
+  animation: glitch 2s infinite;
+  text-align: center;
+}
+
+@keyframes glitch {
+  0% {transform: translate(0)}
+  20% {transform: translate(-2px, 2px)}
+  40% {transform: translate(-2px, -2px)}
+  60% {transform: translate(2px, 2px)}
+  80% {transform: translate(2px, -2px)}
+  100% {transform: translate(0)}
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+  width: 100%;
+  max-width: 1000px;
+  padding: 10px;
+}
+
+@media (max-width: 767px) {
+  .grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+}
+
+@media (min-width: 768px) {
+  .grid {
+    grid-template-columns: repeat(5, 1fr);
+    gap: 15px;
+  }
+}
+
+.card {
+  background: #000;
+  border: 2px solid #333;
+  padding: clamp(8px, 2vw, 15px);
+  cursor: pointer;
+  transition: 0.2s;
+  position: relative;
+  min-height: 80px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  touch-action: manipulation;
+}
+
+.card:hover, .card:active {
+  border-color: var(--b-color);
+  background: #080808;
+  box-shadow: 0 0 15px var(--b-color);
+  transform: scale(1.02);
+}
+
+.card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 5px;
+  height: 100%;
+  background: var(--b-color);
+}
+
+.beast-name {
+  font-size: clamp(0.8rem, 2.5vw, 1.1rem);
+  font-weight: 900;
+  color: #fff;
+}
+
+.beast-type {
+  font-size: clamp(0.5rem, 1.5vw, 0.6rem);
+  letter-spacing: 1px;
+  color: var(--b-color);
+  font-weight: bold;
+}
+
+#battle-screen {
+  display: none;
+  flex: 1;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+}
+
+#arena-bg {
+  flex: 1;
+  position: relative;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  background: radial-gradient(circle at center, rgba(0, 243, 255, 0.2) 0%, transparent 75%),
+              linear-gradient(rgba(0,0,0,0.9), rgba(0,0,0,0.5)),
+              repeating-linear-gradient(0deg, transparent 0, transparent 1px, rgba(0, 243, 255, 0.1) 1px, transparent 2px) 0 0 / 100% 40px,
+              repeating-linear-gradient(90deg, transparent 0, transparent 1px, rgba(0, 243, 255, 0.1) 1px, transparent 2px) 0 0 / 40px 100%;
+  perspective: 500px;
+  padding: 10px;
+}
+
+.hud-top {
+  height: auto;
+  min-height: 80px;
+  display: flex;
+  justify-content: space-between;
+  padding: clamp(10px, 2vw, 20px);
+  gap: 10px;
+  background: #080808;
+  border-bottom: 2px solid #333;
+  z-index: 10;
+}
+
+@media (max-width: 767px) {
+  .hud-top {
+    flex-direction: column;
+    padding: 10px;
+  }
+  .hud-top > div {
+    width: 100% !important;
+  }
+}
+
+.hp-rail {
+  width: 100%;
+  height: clamp(16px, 3vw, 24px);
+  background: #111;
+  border: 2px solid #444;
+  margin-top: 8px;
+  position: relative;
+}
+
+.hp-bar {
+  height: 100%;
+  width: 100%;
+  transition: width 0.3s;
+  background-image: repeating-linear-gradient(-45deg, var(--b-color) 0px, var(--b-color) 10px, #000 10px, #000 12px);
+  box-shadow: 0 0 10px var(--b-color);
+}
+
+.hp-val-text {
+  font-size: clamp(0.6rem, 1.5vw, 0.8rem);
+  color: #888;
+  margin-top: 4px;
+  letter-spacing: 1px;
+  font-weight: bold;
+}
+
+.sprite {
+  width: clamp(100px, 20vw, 180px);
+  height: clamp(100px, 20vw, 180px);
+  border: 2px solid var(--cyber-blue);
+  background: rgba(0,0,0,0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: clamp(3rem, 8vw, 5rem);
+  font-weight: 900;
+  color: #fff;
+  text-shadow: 0 0 15px var(--cyber-blue);
+  transition: 0.3s;
+  position: relative;
+}
+
+.active-sprite {
+  border-color: #fff;
+  box-shadow: 0 0 30px #fff;
+  transform: scale(1.1);
+}
+
+.evo-flash {
+  animation: evoFlash 1.5s ease-in-out;
+}
+
+@keyframes evoFlash {
+  0% { filter: brightness(1); transform: scale(1); }
+  50% { filter: brightness(10) blur(5px); transform: scale(1.2); border-color: #fff; }
+  100% { filter: brightness(1); transform: scale(1); }
+}
+
+#control-panel {
+  height: auto;
+  min-height: 200px;
+  background: #000;
+  display: flex;
+  border-top: 2px solid #333;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 767px) {
+  #control-panel {
+    flex-direction: column;
+    min-height: auto;
+  }
+}
+
+#console {
+  width: 35%;
+  min-width: 200px;
+  padding: clamp(10px, 2vw, 20px);
+  border-right: 1px solid #333;
+  font-size: clamp(0.6rem, 1.5vw, 0.8rem);
+  color: #aaa;
+  display: flex;
+  flex-direction: column;
+}
+
+@media (max-width: 767px) {
+  #console {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid #333;
+  }
+}
+
+.data-val {
+  color: #fff;
+  font-weight: bold;
+}
+
+#move-grid {
+  flex: 1;
+  padding: clamp(10px, 2vw, 20px);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: clamp(8px, 2vw, 15px);
+  min-width: 250px;
+}
+
+.move-btn {
+  background: #0a0a0a;
+  color: #555;
+  border: 1px solid #333;
+  cursor: pointer;
+  font-weight: 900;
+  font-family: 'Courier New';
+  padding: clamp(8px, 2vw, 12px);
+  font-size: clamp(0.7rem, 1.5vw, 0.9rem);
+  touch-action: manipulation;
+  min-height: 40px;
+}
+
+.move-btn.selected {
+  border-color: var(--cyber-blue);
+  color: var(--cyber-blue);
+  background: rgba(0, 243, 255, 0.05);
+}
+
+#exec-trigger {
+  position: absolute;
+  bottom: clamp(200px, 25vh, 265px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: clamp(10px, 2vw, 15px) clamp(20px, 4vw, 40px);
+  background: #f00;
+  color: #000;
+  border: none;
+  font-weight: 900;
+  cursor: pointer;
+  display: none;
+  z-index: 20;
+  clip-path: polygon(10% 0, 100% 0, 100% 70%, 90% 100%, 0 100%, 0 30%);
+  font-size: clamp(0.8rem, 2vw, 1rem);
+  touch-action: manipulation;
+}
+
+#ticker {
+  position: absolute;
+  top: clamp(80px, 15vh, 150px);
+  left: 50%;
+  transform: translateX(-50%);
+  font-weight: 900;
+  z-index: 50;
+  font-size: clamp(1.5rem, 5vw, 3rem);
+  pointer-events: none;
+  text-align: center;
+  width: 90%;
+  max-width: 800px;
+}
+
+.crit-text {
+  color: #f00;
+  border: clamp(2px, 0.5vw, 4px) solid #f00;
+  padding: clamp(5px, 1vw, 10px) clamp(10px, 2vw, 20px);
+  background: rgba(0,0,0,0.8);
+  transform: rotate(-5deg);
+  display: inline-block;
+}
+
+.shake {
+  animation: shake 0.3s;
+}
+
+@keyframes shake {
+  10%, 90% { transform: translate3d(-4px, 0, 0); }
+  20%, 80% { transform: translate3d(8px, 0, 0); }
+  30%, 50%, 70% { transform: translate3d(-10px, 0, 0); }
+}
+
+#back-btn {
+  position: absolute;
+  top: clamp(10px, 2vw, 20px);
+  left: clamp(10px, 2vw, 20px);
+  background: #000;
+  color: var(--cyber-blue);
+  border: 2px solid var(--cyber-blue);
+  padding: clamp(8px, 1.5vw, 10px) clamp(15px, 2vw, 20px);
+  cursor: pointer;
+  font-family: 'Courier New';
+  font-weight: 900;
+  z-index: 200;
+  font-size: clamp(0.7rem, 1.5vw, 0.9rem);
+  touch-action: manipulation;
+}
+
+#back-btn:hover, #back-btn:active {
+  background: var(--cyber-blue);
+  color: #000;
+}
+
+#dialog-box {
+  position: absolute;
+  inset: 0;
+  z-index: 200;
+  background: rgba(0,0,0,0.95);
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+#dialog-text {
+  color: #fff;
+  font-size: clamp(0.9rem, 2vw, 1.2rem);
+  text-align: center;
+  max-width: 800px;
+  line-height: 1.8;
+  margin-bottom: 20px;
+  text-transform: none;
+}
+
+.dialog-btn {
+  background: #000;
+  color: var(--cyber-blue);
+  border: 2px solid var(--cyber-blue);
+  padding: clamp(10px, 2vw, 15px) clamp(20px, 3vw, 40px);
+  cursor: pointer;
+  font-family: 'Courier New';
+  font-weight: 900;
+  margin: 5px;
+  font-size: clamp(0.8rem, 1.8vw, 1.1rem);
+  touch-action: manipulation;
+}
+
+.dialog-btn:hover {
+  background: var(--cyber-blue);
+  color: #000;
+}
+
+#tower-level-ind {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: #fff;
+  font-size: clamp(0.9rem, 2vw, 1.2rem);
+  z-index: 20;
+  text-shadow: 0 0 10px var(--cyber-blue);
+  display: none;
+}
+
+#trader-screen {
+  position: absolute;
+  inset: 0;
+  z-index: 90;
+  background: rgba(0,0,0,0.95);
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.trade-opt {
+  border: 1px solid gold;
+  color: gold;
+  margin: 10px 0;
+  padding: clamp(15px, 2vw, 20px);
+  width: 90%;
+  max-width: 300px;
+  text-align: center;
+  cursor: pointer;
+  font-size: clamp(0.8rem, 1.8vw, 1rem);
+  touch-action: manipulation;
+}
+
+.trade-opt:hover {
+  background: gold;
+  color: #000;
+}
+
+@media (max-width: 767px) {
+  body {
+    overflow-y: auto;
+  }
+  
+  #game-window {
+    min-height: 100vh;
+  }
+  
+  #arena-bg {
+    flex-direction: column;
+    gap: 20px;
+    padding: 20px 10px;
+  }
+}
 </style>
 </head>
 <body>
@@ -82,8 +580,43 @@
 </div>
 </div>
 </div>
-<script src="game-data.js"></script>
 <script>
+// Game Data
+const db = {
+  "Paricheymon": { hp: 30, str: 5, spd: 8, type: "WATER", color: "#00d2ff", moves: [{n:"Water Pump",p:80,val:5,t:"DMG",d:"5 HP hydro-blast."}, {n:"Bald Shine",p:70,t:"STUN",d:"Stun for 2 turns."}, {n:"Kick run",p:100,val:3,t:"RAND_DMG",min:2,max:4,d:"Deals 2-4 HP."}, {n:"Quick dodge",p:80,t:"EVA",d:"50% Evasion next hit."}]},
+  "Debosmitamon": { hp: 32, str: 8, spd: 3, type: "GRASS", color: "#45f542", moves: [{n:"Membrane",p:100,t:"SHIELD",d:"3-Hit Defensive Layer."}, {n:"Root Hold",p:100,val:3,t:"RAND_DMG",min:2,max:4,d:"Catch prey (2-4 HP)."}, {n:"Pollen Burst",p:50,val:6,t:"DMG",d:"6 HP burst."}, {n:"Quick dodge",p:50,t:"EVA",d:"50% Evasion next hit."}]},
+  "Smitimon": { hp: 28, str: 8, spd: 7, type: "FIRE", color: "#ff5e00", moves: [{n:"Roll no. 1",p:60,val:3,t:"LEECH",d:"Siphon 3 HP to Self."}, {n:"SEA",p:100,val:3,t:"DMG",d:"Thermal hit (3 HP)."}, {n:"Padhai Mat",p:60,t:"WEAK",d:"Opp deals 50% less dmg."}, {n:"Quick dodge",p:50,t:"EVA",d:"50% Evasion next hit."}]},
+  "Swatimon": { hp: 34, str: 7, spd: 3, type: "SPACE", color: "#9d00ff", moves: [{n:"Wisdom",p:90,t:"WIS",d:"Deals 1/2 Opp HP if Higher."}, {n:"Irony",p:100,t:"SWAP",once:true,d:"Swap HP; Skip turn."}, {n:"Pause",p:50,t:"STUN",d:"Opp skips 2 turns."}, {n:"Metaphor",p:100,val:3,t:"DMG",d:"3 HP direct strike."}]},
+  "GarimaJmon": { hp: 37, str: 7, spd: 5, type: "GHOST", color: "#ff0055", moves: [{n:"Wrath",p:20,t:"WRATH",d:"Set Opp HP to 1. Breaks Shield."}, {n:"Totalitarian",p:50,t:"STUN",once:true,d:"Stun 2 turns."}, {n:"Bratt!",p:100,val:4,t:"DMG",d:"4 HP strike."}, {n:"Escapism",p:60,t:"EVA",d:"50% Evasion next hit."}]},
+  "Deepalimon": { hp: 33, str: 7, spd: 5, type: "IRON", color: "#00ff95", moves: [{n:"Death Stare",p:100,t:"DS",d:"Execute if HP < 30%."}, {n:"Silence",p:50,val:4,t:"STUN",d:"4 HP + 1 Turn Stun."}, {n:"Chem Burst",p:100,val:3,t:"DMG",d:"3 HP hit."}, {n:"Out Syllabus",p:40,t:"STUN",d:"Stun 2 Turns."}]},
+  "Rohitmon": { hp: 30, str: 8, spd: 8, type: "COMBAT", color: "#ffcc00", moves: [{n:"Dunk",p:60,val:4,t:"BLEED",d:"4 HP + Bleed (3 turns)."}, {n:"Intimidate",p:50,t:"STUN",d:"Stun 1 Turn."}, {n:"Jawline cut",p:100,val:3,t:"DMG",d:"3 HP cut."}, {n:"Quick Dodge",p:60,t:"EVA",d:"50% Evasion next hit."}]},
+  "MonsinMon": { hp: 35, str: 9, spd: 7, type: "LEGEND", color: "#ffffff", moves: [{n:"Inshallah",p:60,t:"RISK",d:"Lose 8 HP on HIT -> Deal 10 Pierce DMG."}, {n:"Iron Body",p:100,t:"SHIELD",d:"3-Hit Defensive Layer."}, {n:"KhatnaCut",p:100,val:3,t:"DMG",d:"3 HP hit."}, {n:"Quick dodge",p:50,t:"EVA",d:"50% Evasion next hit."}]},
+  "Etikamon": { hp: 34, str: 8, spd: 6, type: "NATURE", color: "#a6ff00", moves: [{n:"Child Throw",p:60,t:"BLEED_RAND",d:"1-2 HP + Bleed."}, {n:"Tapasya",p:100,t:"HEAL",d:"Recover 3 HP."}, {n:"Compass",p:100,val:3,t:"DMG"}, {n:"Quick Dodge",p:50,t:"EVA",d:"50% Evasion next hit."}]},
+  "PradeepMon": { hp: 34, str: 8, spd: 8, type: "MYSTIC", color: "#0077ff", moves: [{n:"Bohot dekhe hai",p:60,t:"BLEED",d:"Infects Opp with Bleed (3 turns)."}, {n:"Bald burst",p:60,val:4,t:"SILENCE",d:"4 HP + 1 Turn Stun."}, {n:"Go out",p:40,t:"STUN",d:"Stun 2 Turns."}, {n:"BABU",p:100,val:3,t:"DMG"}]},
+  "Vibhamon": { hp: 150, str: 12, spd: 10, type: "ULTIMATE", color: "#ff0000", moves: [{n:"Resticate",p:40,val:0,t:"PERCENT",d:"50% of user HP."}, {n:"Suspend",p:100,val:5,t:"DMG",d:"5 HP damage."}, {n:"Speech",p:20,t:"SPEECH_STUN",d:"3 turn stun."}, {n:"Principle's Warrant",p:100,t:"WARRANT",d:"No potions for 5 turns, -2 DMG."}]}
+};
+
+const evoTree = {
+  "Paricheymon": ["Deepalimon", "PradeepMon"],
+  "Debosmitamon": ["Etikamon", "Swatimon"],
+  "Smitimon": ["Rohitmon", "MonsinMon"]
+};
+
+const trainers = {
+  "Kashmiri Adya": {id: "ADYA", c: "#ff9933", name: "Pather fekh", d: "Opp takes 1 Bleed on attack."},
+  "Bengali Noel": {id: "NOEL", c: "#ff0099", name: "Kaala Jaadu", d: "Bleed 2HP/turn if dmg dealt."},
+  "Milky Shubhan": {id: "SHUBHAN", c: "#00ccff", name: "Dudh", d: "+1 Heal Potion at start."},
+  "Gitthi Naysha": {id: "NAYSHA", c: "#ffd700", name: "Judge", d: "Opp cannot use Heal/Anti."},
+  "Kaala Uday": {id: "UDAY", c: "#9933ff", name: "Andhera", d: "Opp Acc -15% on non-specials."},
+  "Fatima Chahak": {id: "CHAHAK", c: "#00ff00", name: "Maksad", d: "+2 DMG & +10% ACC on Specials."},
+  "Bihari Rishit": {id: "RISHIT", c: "#ff6600", name: "Chor", d: "Steals 1 random item at start."},
+  "Janwar Neil": {id: "NEIL", c: "#4b0082", name: "Bhukad", d: "2 Backup Potions (5HP & 3HP)."},
+  "Khamba Aayansh": {id: "AAYANSH", c: "#808080", name: "Ragebait", d: "Buff after Backup is used."},
+  "Brat Advik": {id: "ADVIK", c: "#ff4500", name: "Over-confidence", d: "20% dodge special moves."},
+  "Lord Keshav": {id: "KESHAV", c: "#ffffff", name: "God's Touch", d: "All trainer abilities combined."}
+};
+
+// Game Variables
 let p1,p2,turn=1,curM,selectionPhase=0,towerLevel=1,towerList=[],towerInventory=null,towerEvoStage=0,potionBlock={p1:0,p2:0,dmgReduction:{p1:0,p2:0}};
 
 window.onload=()=>{loadBeasts();};
