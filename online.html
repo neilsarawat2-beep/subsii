@@ -396,6 +396,7 @@
   padding: 10px;
   border: 1px solid #333;
   background: #0a0a0a;
+  transition: all 0.3s ease;
 }
 
 .player-hud.team-a {
@@ -409,6 +410,7 @@
 .player-hud.active-player {
   border: 2px solid var(--cyber-blue);
   box-shadow: 0 0 10px var(--cyber-blue);
+  background: #0f0f0f;
 }
 
 .player-name-row {
@@ -438,6 +440,7 @@
   font-size: 0.6rem;
   color: #aaa;
   margin-top: 3px;
+  min-height: 15px;
 }
 
 .items-row {
@@ -445,6 +448,7 @@
   gap: 8px;
   margin-top: 5px;
   font-size: 0.7rem;
+  flex-wrap: wrap;
 }
 
 .item-badge {
@@ -452,6 +456,13 @@
   border: 1px solid var(--cyber-blue);
   padding: 2px 6px;
   color: var(--cyber-blue);
+}
+
+.potion-block-indicator {
+  color: #f00;
+  font-size: 0.6rem;
+  margin-top: 3px;
+  font-weight: bold;
 }
 
 /* Arena with flexible sprites */
@@ -464,7 +475,10 @@
   align-items: center;
   gap: 20px;
   padding: 20px;
-  background: radial-gradient(circle at center, rgba(0, 243, 255, 0.2) 0%, transparent 75%), linear-gradient(rgba(0,0,0,0.9), rgba(0,0,0,0.5)), repeating-linear-gradient(0deg, transparent 0, transparent 1px, rgba(0, 243, 255, 0.1) 1px, transparent 2px) 0 0 / 100% 40px, repeating-linear-gradient(90deg, transparent 0, transparent 1px, rgba(0, 243, 255, 0.1) 1px, transparent 2px) 0 0 / 40px 100%;
+  background: radial-gradient(circle at center, rgba(0, 243, 255, 0.2) 0%, transparent 75%), 
+              linear-gradient(rgba(0,0,0,0.9), rgba(0,0,0,0.5)), 
+              repeating-linear-gradient(0deg, transparent 0, transparent 1px, rgba(0, 243, 255, 0.1) 1px, transparent 2px) 0 0 / 100% 40px, 
+              repeating-linear-gradient(90deg, transparent 0, transparent 1px, rgba(0, 243, 255, 0.1) 1px, transparent 2px) 0 0 / 40px 100%;
 }
 
 .sprite-flex {
@@ -495,6 +509,16 @@
 
 .sprite-flex.team-b {
   border-color: #ff0000;
+}
+
+.shake {
+  animation: shake 0.3s;
+}
+
+@keyframes shake {
+  10%, 90% { transform: translate3d(-4px, 0, 0); }
+  20%, 80% { transform: translate3d(8px, 0, 0); }
+  30%, 50%, 70% { transform: translate3d(-10px, 0, 0); }
 }
 </style>
 </head>
@@ -527,7 +551,7 @@
 </div>
 </div>
 <div id="waiting-msg">WAITING FOR OPPONENTS...</div>
-<button class="room-btn" onclick="cancelRoom()" style="margin-top: 30px; border-color: #f00; color: #f00;">CANCEL</button>
+<button class="room-btn" onclick="cancelRoom()" style="margin-top: 30px;">CANCEL</button>
 </div>
 
 <!-- Selection Screen -->
@@ -573,9 +597,8 @@
 <script src="game-data.js"></script>
 <script>
 // ============ FIREBASE CONFIGURATION ============
-// REPLACE THIS WITH YOUR FIREBASE CONFIG
 const firebaseConfig = {
- apiKey: "AIzaSyDxaM9pJz-teyRlh3FGWBqrlmNBoHUI8PI",
+  apiKey: "AIzaSyDxaM9pJz-teyRlh3FGWBqrlmNBoHUI8PI",
   authDomain: "onlinesubsi.firebaseapp.com",
   databaseURL: "https://onlinesubsi-default-rtdb.asia-southeast1.firebasedatabase.app",
   projectId: "onlinesubsi",
@@ -584,19 +607,18 @@ const firebaseConfig = {
   appId: "1:449026938160:web:7dc95b9a3c59e35deba4f5"
 };
 
-// Initialize Firebase
 firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
 
 // ============ GAME VARIABLES ============
-let gameMode = null; // '1v1', '1v2', or '2v2'
+let gameMode = null;
 let roomCode = null;
 let isHost = false;
-let playerRole = null; // 'p1', 'p2', 'p3', 'p4'
-let myTeam = null; // 'A' or 'B'
+let playerRole = null;
+let myTeam = null;
 let roomRef = null;
 let gameStateRef = null;
-let players = {}; // All player objects
+let players = {};
 let turn = null;
 let currentTurnIndex = 0;
 let turnOrder = [];
@@ -604,6 +626,8 @@ let curM;
 let selectionPhase = 0;
 let mySelection = { beast: null, trainer: null };
 let gameStarted = false;
+let potionBlock = {}; // {p1: 0, p2: 0, etc}
+let dmgReduction = {}; // {p1: 0, p2: 0, etc}
 
 // ============ NAVIGATION ============
 function goBack() {
@@ -633,7 +657,6 @@ function hostRoom() {
   
   roomRef = database.ref('rooms/' + roomCode);
   
-  // Create room
   const initialPlayers = {
     p1: { connected: true, beast: null, trainer: null, ready: false, team: 'A' }
   };
@@ -650,7 +673,6 @@ function hostRoom() {
   document.getElementById('room-code-display').style.display = 'block';
   document.getElementById('waiting-msg').style.display = 'block';
   
-  // Listen for opponent
   roomRef.child('players').on('value', (snapshot) => {
     const players = snapshot.val();
     const requiredPlayers = gameMode === '1v1' ? 2 : gameMode === '1v2' ? 3 : 4;
@@ -676,7 +698,6 @@ function joinRoom() {
   isHost = false;
   roomRef = database.ref('rooms/' + roomCode);
   
-  // Check if room exists
   roomRef.once('value', (snapshot) => {
     if(!snapshot.exists()) {
       alert('ROOM NOT FOUND');
@@ -693,15 +714,12 @@ function joinRoom() {
     }
     
     gameMode = room.mode;
-    
-    // Assign player role and team
     playerRole = 'p' + (playerCount + 1);
     
-    // Team assignment logic
     if(gameMode === '1v1') {
       myTeam = 'B';
     } else if(gameMode === '1v2') {
-      myTeam = playerCount === 1 ? 'B' : 'B'; // p2 and p3 are both team B
+      myTeam = playerCount === 1 ? 'B' : 'B';
     } else if(gameMode === '2v2') {
       myTeam = playerCount === 1 ? 'B' : (playerCount === 2 ? 'A' : 'B');
     }
@@ -717,7 +735,6 @@ function joinRoom() {
     document.getElementById('waiting-msg').innerText = 'JOINED ROOM: ' + roomCode;
     document.getElementById('waiting-msg').style.display = 'block';
     
-    // Listen for all players
     roomRef.child('players').on('value', (snapshot) => {
       const players = snapshot.val();
       if(players && Object.keys(players).length >= requiredPlayers) {
@@ -746,7 +763,6 @@ function startSelection() {
   document.getElementById('selection-screen').style.display = 'flex';
   loadBeasts();
   
-  // Listen for opponent selections
   roomRef.child('players').on('value', (snapshot) => {
     checkIfAllReady(snapshot.val());
   });
@@ -817,7 +833,6 @@ function initializeBattle(playersData) {
   document.getElementById('selection-screen').style.display = 'none';
   document.getElementById('battle-screen').style.display = 'flex';
   
-  // Create player objects
   players = {};
   const playerKeys = Object.keys(playersData);
   
@@ -839,22 +854,26 @@ function initializeBattle(playersData) {
     };
     
     // Apply trainer bonuses
-    if(players[key].trId === "SHUBHAN") players[key].items.HP += 1;
-    if(players[key].trId === "NEIL") players[key].items.BKUP = 2;
+    if(players[key].trId === "SHUBHAN" || players[key].trId === "KESHAV") players[key].items.HP += 1;
+    if(players[key].trId === "NEIL" || players[key].trId === "KESHAV") players[key].items.BKUP = 2;
+    
+    // Initialize potion block
+    potionBlock[key] = 0;
+    dmgReduction[key] = 0;
   });
   
-  // Determine turn order
   turnOrder = playerKeys.sort();
   currentTurnIndex = 0;
   turn = turnOrder[currentTurnIndex];
   
-  // Initialize game state in Firebase
   if(isHost) {
     gameStateRef = roomRef.child('gameState');
     const initialState = {
       turn: turn,
       turnOrder: turnOrder,
-      currentAction: null
+      currentAction: null,
+      potionBlock: potionBlock,
+      dmgReduction: dmgReduction
     };
     
     playerKeys.forEach(key => {
@@ -868,13 +887,11 @@ function initializeBattle(playersData) {
   
   setupBattleUI();
   
-  // Listen for game state changes
   gameStateRef.on('value', (snapshot) => {
     if(!snapshot.exists()) return;
     syncGameState(snapshot.val());
   });
   
-  // Handle item stealing
   handleItemStealing();
 }
 
@@ -885,11 +902,9 @@ function setupBattleUI() {
   hudContainer.innerHTML = '';
   arenaContainer.innerHTML = '';
   
-  // Sort players by team for display
   const teamA = Object.values(players).filter(p => p.team === 'A');
   const teamB = Object.values(players).filter(p => p.team === 'B');
   
-  // Create HUDs
   [...teamA, ...teamB].forEach(p => {
     hudContainer.innerHTML += `
       <div class="player-hud team-${p.team.toLowerCase()}" id="hud-${p.role}">
@@ -903,6 +918,7 @@ function setupBattleUI() {
         <div style="font-size:0.7rem; color:#888;" id="hp-${p.role}">CORE: ${p.cur}/${p.hp}</div>
         <div style="font-size:0.6rem; color:${p.trColor}; margin-top:2px;">TR: ${p.trainer}</div>
         <div class="status-row" id="status-${p.role}"></div>
+        <div class="potion-block-indicator" id="potion-block-${p.role}"></div>
         <div class="items-row" id="items-${p.role}">
           <span class="item-badge">HP:${p.items.HP}</span>
           <span class="item-badge">ANTI:${p.items.ANTI}</span>
@@ -912,7 +928,6 @@ function setupBattleUI() {
       </div>
     `;
     
-    // Create sprite
     arenaContainer.innerHTML += `
       <div class="sprite-flex team-${p.team.toLowerCase()}" id="sprite-${p.role}" style="--b-color:${p.color}; border-color:${p.color};">
         ${p.n[0]}
@@ -927,8 +942,7 @@ function handleItemStealing() {
   let thiefMsg = "";
   
   Object.values(players).forEach(p => {
-    if(p.trId === "RISHIT") {
-      // Find opponents
+    if(p.trId === "RISHIT" || p.trId === "KESHAV") {
       const opponents = Object.values(players).filter(opp => opp.team !== p.team);
       if(opponents.length > 0) {
         const victim = opponents[Math.floor(Math.random() * opponents.length)];
@@ -983,7 +997,6 @@ function deserializePlayer(data, original) {
 function syncGameState(state) {
   if(!state) return;
   
-  // Update all players
   Object.keys(players).forEach(key => {
     if(state[key]) {
       players[key] = deserializePlayer(state[key], players[key]);
@@ -991,9 +1004,11 @@ function syncGameState(state) {
   });
   
   turn = state.turn;
+  potionBlock = state.potionBlock || {};
+  dmgReduction = state.dmgReduction || {};
+  
   updateUI();
   
-  // Handle current action
   if(state.currentAction && state.currentAction.processed === false && state.currentAction.player !== playerRole) {
     processOpponentAction(state.currentAction);
   }
@@ -1002,19 +1017,15 @@ function syncGameState(state) {
 // ============ UI UPDATE ============
 function updateUI() {
   Object.values(players).forEach(p => {
-    // Update HP bar
     const bar = document.getElementById(`bar-${p.role}`);
     if(bar) bar.style.width = (Math.max(0, p.cur) / p.hp * 100) + "%";
     
-    // Update HP text
     const hpText = document.getElementById(`hp-${p.role}`);
     if(hpText) hpText.innerText = `CORE: ${Math.max(0, Math.floor(p.cur))}/${p.hp}`;
     
-    // Update shield
     const shield = document.getElementById(`shield-${p.role}`);
     if(shield) shield.innerText = p.shield > 0 ? `SHIELD:${p.shield}` : (p.shieldLock ? "[LOCK]" : "");
     
-    // Update status
     const status = document.getElementById(`status-${p.role}`);
     if(status) {
       let st = [];
@@ -1025,7 +1036,12 @@ function updateUI() {
       status.innerText = st.join(" | ");
     }
     
-    // Update items
+    const potBlock = document.getElementById(`potion-block-${p.role}`);
+    if(potBlock) {
+      const blockTurns = potionBlock[p.role] || 0;
+      potBlock.innerText = blockTurns > 0 ? `POTION BLOCKED (${blockTurns})` : "";
+    }
+    
     const items = document.getElementById(`items-${p.role}`);
     if(items) {
       items.innerHTML = `
@@ -1036,7 +1052,6 @@ function updateUI() {
       `;
     }
     
-    // Highlight active player
     const hud = document.getElementById(`hud-${p.role}`);
     if(hud) {
       if(p.role === turn) {
@@ -1046,7 +1061,6 @@ function updateUI() {
       }
     }
     
-    // Highlight active sprite
     const sprite = document.getElementById(`sprite-${p.role}`);
     if(sprite) {
       if(p.role === turn) {
@@ -1061,7 +1075,6 @@ function updateUI() {
 function showMain() {
   document.getElementById('ticker').innerText = "";
   
-  // Only show controls if it's your turn
   const isMyTurn = turn === playerRole;
   
   if(isMyTurn) {
@@ -1086,7 +1099,6 @@ function showSub(m) {
   document.getElementById('cat-itm').style.display='none';
   const a = players[turn];
   
-  // Find opponents (different team)
   const opponents = Object.values(players).filter(p => p.team !== a.team && p.cur > 0);
   
   if(m==='ATTACK') {
@@ -1105,14 +1117,14 @@ function showSub(m) {
       {n:"BACKUP",t:"BKUP",v:a.items.BKUP,d:"Revive Life"}
     ];
     
-    // Check if any opponent has NAYSHA
-    const oppHasNaysha = opponents.some(o => o.trId === "NAYSHA");
+    const oppHasNaysha = opponents.some(o => o.trId === "NAYSHA" || o.trId === "KESHAV");
+    const currentPotBlock = potionBlock[turn] || 0;
     
     itms.forEach((it,i)=>{
       let b=document.getElementById('b'+i);
       b.style.display='block';
       b.innerText=`${it.n}(${it.v})`;
-      b.disabled = (it.v<=0 || (oppHasNaysha && (it.t === "HP" || it.t === "ANTI")));
+      b.disabled = (it.v<=0 || (oppHasNaysha && (it.t === "HP" || it.t === "ANTI")) || (currentPotBlock > 0 && (it.t === "HP" || it.t === "ANTI")));
       b.onclick=()=>prep(it,i,true);
     });
   }
@@ -1121,7 +1133,7 @@ function showSub(m) {
 function prep(m,i,isItm) {
   const a = players[turn];
   const opponents = Object.values(players).filter(p => p.team !== a.team && p.cur > 0);
-  const o = opponents[0]; // Primary opponent for calculations
+  const o = opponents[0];
   
   curM = {...m, isItem:isItm};
   
@@ -1134,17 +1146,15 @@ function prep(m,i,isItm) {
   let mods = a.accMod;
   const isSp = (m.t === "DMG" || m.t === "RAND_DMG" || m.t === "STUN" || m.t === "SILENCE" || m.t === "PERCENT" || m.t === "SPEECH_STUN");
   
-  if(o && !isItm && o.trId === "UDAY" && isSp && m.t !== "WIS" && m.t !== "SHIELD") mods -= 15;
-  if(!isItm && a.trId === "CHAHAK" && isSp) mods += 10;
-  if(o && !isItm && o.trId === "KESHAV" && isSp && m.t !== "WIS" && m.t !== "SHIELD") mods -= 15;
-  if(!isItm && a.trId === "KESHAV" && isSp) mods += 10;
+  if(o && !isItm && (o.trId === "UDAY" || o.trId === "KESHAV") && isSp && m.t !== "WIS" && m.t !== "SHIELD") mods -= 15;
+  if(!isItm && (a.trId === "CHAHAK" || a.trId === "KESHAV") && isSp) mods += 10;
   
   document.getElementById('c-acc').innerText=(isItm ? 100 : Math.min(100, acc + mods)) + "%";
   
   let d = m.val || "EFF";
   if(m.t === "RISK") d = 10;
-  if(a.trId === "CHAHAK" && isSp && !isNaN(d)) d = parseInt(d)+2;
-  if(a.trId === "KESHAV" && isSp && !isNaN(d)) d = parseInt(d)+2;
+  if(m.t === "PERCENT") d = "50% USER HP";
+  if((a.trId === "CHAHAK" || a.trId === "KESHAV") && isSp && !isNaN(d)) d = parseInt(d)+2;
   
   document.getElementById('c-dmg').innerText=d;
   document.getElementById('c-desc').innerText=`// ${m.d||"Active"}`;
@@ -1158,7 +1168,6 @@ function handleAction() {
   
   document.getElementById('exec-trigger').style.display='none';
   
-  // Send action to Firebase
   gameStateRef.child('currentAction').set({
     player: playerRole,
     move: curM,
@@ -1166,7 +1175,6 @@ function handleAction() {
     timestamp: firebase.database.ServerValue.TIMESTAMP
   });
   
-  // Process action locally
   executeAction();
 }
 
@@ -1174,11 +1182,9 @@ function executeAction() {
   const att = players[turn];
   const opponents = Object.values(players).filter(p => p.team !== att.team && p.cur > 0);
   
-  // Select random alive opponent as target
   const def = opponents[Math.floor(Math.random() * opponents.length)];
   
   if(!def && !curM.isItem) {
-    // No valid targets, end turn
     setTimeout(checkDeath, 500);
     return;
   }
@@ -1198,38 +1204,54 @@ function executeAction() {
     let hit = (curM.p || 100) + att.accMod;
     const isSp = (curM.t === "DMG" || curM.t === "RAND_DMG" || curM.t === "STUN" || curM.t === "SILENCE" || curM.t === "PERCENT" || curM.t === "SPEECH_STUN");
     
-    if(def.trId === "UDAY" && isSp && curM.t !== "WIS" && curM.t !== "SHIELD") hit -= 15;
-    if(att.trId === "CHAHAK" && isSp) hit += 10;
-    if(def.trId === "KESHAV" && isSp && curM.t !== "WIS" && curM.t !== "SHIELD") hit -= 15;
-    if(att.trId === "KESHAV" && isSp) hit += 10;
+    if((def.trId === "UDAY" || def.trId === "KESHAV") && isSp && curM.t !== "WIS" && curM.t !== "SHIELD") hit -= 15;
+    if((att.trId === "CHAHAK" || att.trId === "KESHAV") && isSp) hit += 10;
     if(def.evasion > 0) { hit -= 50; def.evasion = 0; }
     
     let dodged = false;
-    if(def.trId === "ADVIK" && (isSp || att.buff > 0)) { if(Math.random() < 0.2) dodged = true; }
-    if(def.trId === "KESHAV" && (isSp || att.buff > 0)) { if(Math.random() < 0.2) dodged = true; }
+    if((def.trId === "ADVIK" || def.trId === "KESHAV") && (isSp || att.buff > 0)) { 
+      if(Math.random() < 0.2) dodged = true; 
+    }
     
     if(Math.random()*100 > hit || dodged) {
       t.innerHTML = dodged ? "<div class='crit-text' style='color:#ff4500;'>[ DODGED ]</div>" : "<div class='crit-text' style='color:#888; border-color:#888'>[ MISSED ]</div>";
       att.accMod = 0;
     } else {
       let d = (curM.val||0);
+      
+      // Handle different move types
       if(curM.t==="RAND_DMG") d = Math.floor(Math.random()*(curM.max-curM.min+1))+curM.min;
       if(curM.t==="RISK") { att.cur = Math.max(1, att.cur - 8); d = 10; }
       if(curM.t==="WIS") d = (def.cur > att.cur) ? Math.floor(def.cur / 2) : 0;
       if(curM.t==="DS") d = (def.cur < (def.hp * 0.3)) ? def.cur : 2;
       if(curM.t==="PERCENT") d = Math.floor(att.cur * 0.5);
       if(curM.t==="SPEECH_STUN") { def.stun = 3; d = 0; }
+      if(curM.t==="WARRANT") {
+        if(def.cur <= 20) {
+          potionBlock[def.role] = 5;
+          dmgReduction[def.role] = 2;
+          msg = "[ WARRANT ACTIVATED ]"; d = 0;
+        } else {
+          d = 0;
+          msg = "[ WARRANT FAILED - HP TOO HIGH ]";
+        }
+      }
       if(curM.t==="HEAL") { att.cur = Math.min(att.hp, att.cur+3); d=0; msg="[ HEALED ]"; }
       if(curM.t==="SWAP") { let tmp = att.cur; att.cur = def.cur; def.cur = tmp; d = 0; msg="[ SWAPPED ]"; }
-      if(curM.t==="BLEED" || curM.t==="BLEED_RAND") def.bleed = 3;
+      if(curM.t==="BLEED") def.bleed = 3;
+      if(curM.t==="BLEED_RAND") { def.bleed = 3; d = Math.floor(Math.random() * 2) + 1; } // 1-2 HP + Bleed
       if(curM.t==="WEAK") def.weak = 3;
-      if(curM.t==="STUN" || curM.t==="SILENCE") def.stun = (curM.n === "Silence" || curM.n === "Intimidate" || curM.n === "Bald Shine") ? 1 : 2;
+      if(curM.t==="STUN") def.stun = (curM.n === "Bald Shine") ? 2 : (curM.n === "Intimidate") ? 1 : 2;
+      if(curM.t==="SILENCE") { def.stun = 1; } // Silence already deals damage via val
       if(curM.t==="EVA") { att.evasion = 1; msg="[ EVASIVE ]"; }
       
+      // Apply damage modifiers
       if(att.weak > 0 && d > 0) d = Math.floor(d/2);
-      if(att.trId === "CHAHAK" && isSp && d > 0) d += 2;
-      if(att.trId === "KESHAV" && isSp && d > 0) d += 2;
+      const currentDmgRed = dmgReduction[turn] || 0;
+      if(currentDmgRed > 0 && d > 0) d = Math.max(0, d - currentDmgRed);
+      if((att.trId === "CHAHAK" || att.trId === "KESHAV") && isSp && d > 0) d += 2;
       
+      // Shield logic
       if(def.shield > 0 && (d > 0 || curM.t === "WRATH")) {
         if(att.buff > 0) {
           def.shield = 0;
@@ -1245,21 +1267,25 @@ function executeAction() {
         }
       }
       
+      // Buff damage
       if(att.buff > 0 && d > 0) { d += 3; if(!dodged) att.buff = 0; }
       att.accMod = 0;
       
+      // Special moves
       if(curM.t==="WRATH") { def.cur=1; d=0; msg="[ WRATH ]"; }
       if(curM.t==="LEECH") { att.cur = Math.min(att.hp, att.cur + d); }
       if(curM.t==="SHIELD" && !att.shieldLock) { att.shield = 3; msg="[ SHIELD UP ]"; }
       
+      // Apply damage
       def.cur=Math.max(0, def.cur-d);
-      if(d>0 && sDef) { sDef.classList.add('shake'); att.hasDealtDmg = true; }
-      
-      if(def.trId === "ADYA" && (d >= 0)) {
-        att.cur = Math.max(0, att.cur - 1);
-        msg = msg ? msg + " + [RECOIL]" : "[ RECOIL ]";
+      if(d>0 && sDef) { 
+        sDef.classList.add('shake'); 
+        att.hasDealtDmg = true;
+        setTimeout(() => sDef.classList.remove('shake'), 300);
       }
-      if(def.trId === "KESHAV" && (d >= 0)) {
+      
+      // Recoil damage (Adya, Keshav)
+      if((def.trId === "ADYA" || def.trId === "KESHAV") && d > 0) {
         att.cur = Math.max(0, att.cur - 1);
         msg = msg ? msg + " + [RECOIL]" : "[ RECOIL ]";
       }
@@ -1273,8 +1299,12 @@ function executeAction() {
   
   updateUI();
   
-  // Update Firebase with new state
-  const stateUpdate = { 'currentAction/processed': true };
+  // Update Firebase
+  const stateUpdate = { 
+    'currentAction/processed': true,
+    potionBlock: potionBlock,
+    dmgReduction: dmgReduction
+  };
   Object.keys(players).forEach(key => {
     stateUpdate[key] = serializePlayer(players[key]);
   });
@@ -1289,7 +1319,6 @@ function processOpponentAction(action) {
 }
 
 function checkDeath() {
-  // Check each team
   const teamAAlive = Object.values(players).filter(p => p.team === 'A' && p.cur > 0);
   const teamBAlive = Object.values(players).filter(p => p.team === 'B' && p.cur > 0);
   
@@ -1302,8 +1331,7 @@ function checkDeath() {
       p.items.BKUP--;
       p.bleed = 0;
       p.stun = 0;
-      if(p.trId === "AAYANSH") { p.buff = 3; p.accMod = 10; }
-      if(p.trId === "KESHAV") { p.buff = 3; p.accMod = 10; }
+      if(p.trId === "AAYANSH" || p.trId === "KESHAV") { p.buff = 3; p.accMod = 10; }
       
       const t = document.getElementById('ticker');
       t.innerHTML = `<div class='crit-text' style='color:#0f0'>${p.n.toUpperCase()} ${p.revived === 2 ? "IS STILL THERE" : "REBOOTING"}</div>`;
@@ -1345,17 +1373,25 @@ function checkDeath() {
 function endTurn() {
   const c = players[turn];
   
-  if(c.bleed > 0 && c.cur > 0) { c.cur = Math.max(0, c.cur-1); c.bleed--; }
+  // Bleed damage
+  if(c.bleed > 0 && c.cur > 0) { 
+    c.cur = Math.max(0, c.cur-1); 
+    c.bleed--; 
+  }
   
-  if(c.trId === "NOEL" && c.hasDealtDmg) {
+  // Bengali Noel / Lord Keshav ability - apply bleed to opponents if dealt damage
+  if((c.trId === "NOEL" || c.trId === "KESHAV") && c.hasDealtDmg) {
     Object.values(players).filter(p => p.team !== c.team).forEach(o => {
       o.cur = Math.max(0, o.cur - 2);
     });
   }
-  if(c.trId === "KESHAV" && c.hasDealtDmg) {
-    Object.values(players).filter(p => p.team !== c.team).forEach(o => {
-      o.cur = Math.max(0, o.cur - 2);
-    });
+  
+  // Decrement potion block
+  if(potionBlock[turn] > 0) {
+    potionBlock[turn]--;
+    if(potionBlock[turn] === 0) {
+      dmgReduction[turn] = 0;
+    }
   }
   
   updateUI();
@@ -1372,7 +1408,7 @@ function endTurn() {
   if(c.weak > 0) c.weak--;
   c.hasDealtDmg = false;
   
-  // Find next alive player in turn order
+  // Find next alive player
   let nextIndex = (currentTurnIndex + 1) % turnOrder.length;
   let attempts = 0;
   
@@ -1391,18 +1427,16 @@ function endTurn() {
   
   const n = players[turn];
   
-  // Clear shake effects
-  Object.keys(players).forEach(key => {
-    const sprite = document.getElementById(`sprite-${key}`);
-    if(sprite) sprite.classList.remove('shake');
-  });
-  
   if(n.stun > 0) {
     n.stun--;
     updateUI();
     document.getElementById('ticker').innerHTML=`<div class='crit-text' style='color:#f00'>${n.n.toUpperCase()} [ STUNNED ]</div>`;
     
-    const stateUpdate = { turn: turn };
+    const stateUpdate = { 
+      turn: turn,
+      potionBlock: potionBlock,
+      dmgReduction: dmgReduction
+    };
     Object.keys(players).forEach(key => {
       stateUpdate[key] = serializePlayer(players[key]);
     });
@@ -1410,7 +1444,11 @@ function endTurn() {
     
     setTimeout(() => endTurn(), 1000);
   } else {
-    const stateUpdate = { turn: turn };
+    const stateUpdate = { 
+      turn: turn,
+      potionBlock: potionBlock,
+      dmgReduction: dmgReduction
+    };
     Object.keys(players).forEach(key => {
       stateUpdate[key] = serializePlayer(players[key]);
     });
