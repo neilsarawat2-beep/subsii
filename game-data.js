@@ -1,7 +1,7 @@
 // Shared Game Data for Subsi Ki Jang
 // Include this file in all game mode HTML files
 
-const db = {
+window.db = {
   "Paricheymon": {
     hp: 30, str: 5, spd: 8, type: "WATER", color: "#00d2ff",
     moves: [
@@ -109,7 +109,7 @@ const evoTree = {
   "Smitimon": ["Rohitmon", "MonsinMon"]
 };
 
-const trainers = {
+window.trainers = {
   "Kashmiri Adya": {id: "ADYA", c: "#ff9933", name: "Pather fekh", d: "Opp takes 1 Bleed on attack."},
   "Bengali Noel": {id: "NOEL", c: "#ff0099", name: "Kaala Jaadu", d: "Bleed 2HP/turn if dmg dealt."},
   "Milky Shubhan": {id: "SHUBHAN", c: "#00ccff", name: "Dudh", d: "+1 Heal Potion at start."},
@@ -122,3 +122,4 @@ const trainers = {
   "Brat Advik": {id: "ADVIK", c: "#ff4500", name: "Over-confidence", d: "20% dodge special moves."},
   "Lord Keshav": {id: "KESHAV", c: "#ffffff", name: "God's Touch", d: "All trainer abilities combined."}
 };
+
