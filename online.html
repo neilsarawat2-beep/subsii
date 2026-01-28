@@ -1,0 +1,1154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Subsi ki Jang - Online Mode</title>
+<link rel="stylesheet" href="game-styles.css">
+<style>
+#mode-selection {
+  position: absolute;
+  inset: 0;
+  z-index: 100;
+  background: #020202;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+#room-screen {
+  position: absolute;
+  inset: 0;
+  z-index: 100;
+  background: #020202;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.mode-choice-btn {
+  background: #000;
+  color: var(--cyber-blue);
+  border: 2px solid var(--cyber-blue);
+  padding: 20px 60px;
+  margin: 15px;
+  cursor: pointer;
+  font-family: 'Courier New';
+  font-weight: 900;
+  font-size: 1.5rem;
+  transition: 0.2s;
+}
+
+.mode-choice-btn:hover {
+  background: var(--cyber-blue);
+  color: #000;
+  transform: scale(1.05);
+}
+
+.room-input {
+  background: #000;
+  color: var(--cyber-blue);
+  border: 2px solid var(--cyber-blue);
+  padding: 15px 30px;
+  font-family: 'Courier New';
+  font-size: 1.2rem;
+  text-align: center;
+  margin: 10px;
+  width: 300px;
+  text-transform: uppercase;
+}
+
+.room-btn {
+  background: #000;
+  color: var(--cyber-blue);
+  border: 2px solid var(--cyber-blue);
+  padding: 15px 40px;
+  margin: 10px;
+  cursor: pointer;
+  font-family: 'Courier New';
+  font-weight: 900;
+  font-size: 1.1rem;
+}
+
+.room-btn:hover {
+  background: var(--cyber-blue);
+  color: #000;
+}
+
+#waiting-msg {
+  color: #fff;
+  font-size: 1.2rem;
+  margin: 20px;
+  display: none;
+  animation: pulse 1.5s infinite;
+}
+
+#room-code-display {
+  color: #0f0;
+  font-size: 2rem;
+  margin: 20px;
+  letter-spacing: 5px;
+  display: none;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* Flexible Battle HUD */
+.battle-hud-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 10px;
+  background: #080808;
+  border-bottom: 2px solid #333;
+}
+
+.player-hud {
+  flex: 1;
+  min-width: 280px;
+  padding: 10px;
+  border: 1px solid #333;
+  background: #0a0a0a;
+}
+
+.player-hud.team-a {
+  border-left: 3px solid #00ff00;
+}
+
+.player-hud.team-b {
+  border-left: 3px solid #ff0000;
+}
+
+.player-hud.active-player {
+  border: 2px solid var(--cyber-blue);
+  box-shadow: 0 0 10px var(--cyber-blue);
+}
+
+.player-name-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 5px;
+}
+
+.hp-rail-flex {
+  width: 100%;
+  height: 20px;
+  background: #111;
+  border: 2px solid #444;
+  margin: 5px 0;
+  position: relative;
+}
+
+.hp-bar-flex {
+  height: 100%;
+  transition: width 0.3s;
+  background-image: repeating-linear-gradient(-45deg, var(--b-color) 0px, var(--b-color) 10px, #000 10px, #000 12px);
+  box-shadow: 0 0 10px var(--b-color);
+}
+
+.status-row {
+  font-size: 0.6rem;
+  color: #aaa;
+  margin-top: 3px;
+}
+
+.items-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 5px;
+  font-size: 0.7rem;
+}
+
+.item-badge {
+  background: #000;
+  border: 1px solid var(--cyber-blue);
+  padding: 2px 6px;
+  color: var(--cyber-blue);
+}
+
+/* Arena with flexible sprites */
+#arena-flex {
+  flex: 1;
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
+  padding: 20px;
+  background: radial-gradient(circle at center, rgba(0, 243, 255, 0.2) 0%, transparent 75%),
+              linear-gradient(rgba(0,0,0,0.9), rgba(0,0,0,0.5)),
+              repeating-linear-gradient(0deg, transparent 0, transparent 1px, rgba(0, 243, 255, 0.1) 1px, transparent 2px) 0 0 / 100% 40px,
+              repeating-linear-gradient(90deg, transparent 0, transparent 1px, rgba(0, 243, 255, 0.1) 1px, transparent 2px) 0 0 / 40px 100%;
+}
+
+.sprite-flex {
+  width: 150px;
+  height: 150px;
+  border: 2px solid var(--cyber-blue);
+  background: rgba(0,0,0,0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 4rem;
+  font-weight: 900;
+  color: #fff;
+  text-shadow: 0 0 15px var(--cyber-blue);
+  transition: 0.3s;
+  position: relative;
+}
+
+.sprite-flex.active-sprite {
+  border-color: #fff;
+  box-shadow: 0 0 30px #fff;
+  transform: scale(1.15);
+}
+
+.sprite-flex.team-a {
+  border-color: #00ff00;
+}
+
+.sprite-flex.team-b {
+  border-color: #ff0000;
+}
+</style>
+</head>
+<body>
+<div id="crt-overlay"></div>
+<div id="game-window">
+<button id="back-btn" onclick="goBack()">← BACK</button>
+
+<!-- Mode Selection Screen -->
+<div id="mode-selection">
+<h1 style="color: #fff; font-size: 4rem; margin-bottom: 50px; text-shadow: 4px 4px 0px var(--cyber-blue);">ONLINE MODE</h1>
+<button class="mode-choice-btn" onclick="selectGameMode('1v1')">1v1 MODE</button>
+<button class="mode-choice-btn" onclick="selectGameMode('1v2')">1v2 MODE</button>
+<button class="mode-choice-btn" onclick="selectGameMode('2v2')">2v2 MODE</button>
+</div>
+
+<!-- Room Creation/Join Screen -->
+<div id="room-screen">
+<h1 style="color: #fff; font-size: 3rem; margin-bottom: 30px;" id="room-title">1V1 MODE</h1>
+<div style="display: flex; gap: 50px; flex-wrap: wrap; justify-content: center;">
+<div style="text-align: center;">
+<h2 style="color: var(--cyber-blue); margin-bottom: 20px;">HOST ROOM</h2>
+<button class="room-btn" onclick="hostRoom()">CREATE ROOM</button>
+<div id="room-code-display">ROOM: <span id="room-code"></span></div>
+</div>
+<div style="text-align: center;">
+<h2 style="color: var(--cyber-blue); margin-bottom: 20px;">JOIN ROOM</h2>
+<input type="text" class="room-input" id="join-code-input" placeholder="ENTER ROOM CODE" maxlength="6">
+<button class="room-btn" onclick="joinRoom()">JOIN</button>
+</div>
+</div>
+<div id="waiting-msg">WAITING FOR OPPONENTS...</div>
+<button class="room-btn" onclick="cancelRoom()" style="margin-top: 30px; border-color: #f00; color: #f00;">CANCEL</button>
+</div>
+
+<!-- Selection Screen -->
+<div id="selection-screen" style="display: none;">
+<h1>ONLINE BATTLE</h1>
+<div id="sel-hint" style="color:#555; letter-spacing:4px; margin-bottom:10px;">[ SELECT YOUR UNIT ]</div>
+<div class="grid" id="roster"></div>
+</div>
+
+<!-- Battle Screen -->
+<div id="battle-screen" style="display: none;">
+<div id="ticker"></div>
+<div id="battle-hud-container" class="battle-hud-container">
+<!-- Player HUDs will be dynamically generated here -->
+</div>
+<div id="arena-flex">
+<!-- Sprites will be dynamically generated here -->
+</div>
+<button id="exec-trigger" onclick="handleAction()">INITIATE STRIKE</button>
+<div id="control-panel">
+<div id="console">
+<div style="color:var(--cyber-blue); font-weight:900; border-bottom: 1px solid #333; margin-bottom:10px;">>> TACTICAL READOUT</div>
+<div>MODULE: <span id="c-title" class="data-val">---</span></div>
+<div>ACCURACY: <span id="c-acc" class="data-val">---</span></div>
+<div style="color:var(--term-red)">EST DAMAGE: <span id="c-dmg" class="data-val">---</span></div>
+<div id="c-desc" style="color:#666; font-size:0.7rem; margin-top: auto;">// AWAITING MODULE...</div>
+</div>
+<div id="move-grid">
+<button class="move-btn" id="cat-att" onclick="showSub('ATTACK')">ATTACK SET</button>
+<button class="move-btn" id="cat-itm" onclick="showSub('ITEMS')">ITEM POUCH</button>
+<button class="move-btn" id="b0" style="display:none;"></button>
+<button class="move-btn" id="b1" style="display:none;"></button>
+<button class="move-btn" id="b2" style="display:none;"></button>
+<button class="move-btn" id="b3" style="display:none;"></button>
+</div>
+</div>
+</div>
+</div>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+<script src="game-data.js"></script>
+<script>
+// ============ FIREBASE CONFIGURATION ============
+// REPLACE THIS WITH YOUR FIREBASE CONFIG
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+  databaseURL: "https://YOUR_PROJECT_ID.firebaseio.com",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_PROJECT_ID.appspot.com",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId: "YOUR_APP_ID"
+};
+
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+const database = firebase.database();
+
+// ============ GAME VARIABLES ============
+let gameMode = null; // '1v1', '1v2', or '2v2'
+let roomCode = null;
+let isHost = false;
+let playerRole = null; // 'p1', 'p2', 'p3', 'p4'
+let myTeam = null; // 'A' or 'B'
+let roomRef = null;
+let gameStateRef = null;
+let players = {}; // All player objects
+let turn = null;
+let currentTurnIndex = 0;
+let turnOrder = [];
+let curM;
+let selectionPhase = 0;
+let mySelection = { beast: null, trainer: null };
+let gameStarted = false;
+
+// ============ NAVIGATION ============
+function goBack() {
+  if(roomRef) {
+    roomRef.remove();
+  }
+  location.href = 'index.html';
+}
+
+function selectGameMode(mode) {
+  gameMode = mode;
+  document.getElementById('mode-selection').style.display = 'none';
+  document.getElementById('room-screen').style.display = 'flex';
+  document.getElementById('room-title').innerText = mode.toUpperCase() + ' MODE';
+}
+
+// ============ ROOM MANAGEMENT ============
+function generateRoomCode() {
+  return Math.random().toString(36).substring(2, 8).toUpperCase();
+}
+
+function hostRoom() {
+  roomCode = generateRoomCode();
+  isHost = true;
+  playerRole = 'p1';
+  myTeam = 'A';
+  
+  roomRef = database.ref('rooms/' + roomCode);
+  
+  // Create room
+  const initialPlayers = {
+    p1: { connected: true, beast: null, trainer: null, ready: false, team: 'A' }
+  };
+  
+  roomRef.set({
+    mode: gameMode,
+    host: playerRole,
+    players: initialPlayers,
+    gameState: null,
+    createdAt: firebase.database.ServerValue.TIMESTAMP
+  });
+  
+  document.getElementById('room-code').innerText = roomCode;
+  document.getElementById('room-code-display').style.display = 'block';
+  document.getElementById('waiting-msg').style.display = 'block';
+  
+  // Listen for opponent
+  roomRef.child('players').on('value', (snapshot) => {
+    const players = snapshot.val();
+    const requiredPlayers = gameMode === '1v1' ? 2 : gameMode === '1v2' ? 3 : 4;
+    
+    if(players && Object.keys(players).length >= requiredPlayers) {
+      document.getElementById('waiting-msg').style.display = 'none';
+      startSelection();
+    } else if(players) {
+      const count = Object.keys(players).length;
+      document.getElementById('waiting-msg').innerText = `WAITING... (${count}/${requiredPlayers})`;
+    }
+  });
+}
+
+function joinRoom() {
+  const code = document.getElementById('join-code-input').value.toUpperCase().trim();
+  if(!code) {
+    alert('PLEASE ENTER A ROOM CODE');
+    return;
+  }
+  
+  roomCode = code;
+  isHost = false;
+  roomRef = database.ref('rooms/' + roomCode);
+  
+  // Check if room exists
+  roomRef.once('value', (snapshot) => {
+    if(!snapshot.exists()) {
+      alert('ROOM NOT FOUND');
+      return;
+    }
+    
+    const room = snapshot.val();
+    const playerCount = Object.keys(room.players || {}).length;
+    const requiredPlayers = room.mode === '1v1' ? 2 : room.mode === '1v2' ? 3 : 4;
+    
+    if(playerCount >= requiredPlayers) {
+      alert('ROOM IS FULL');
+      return;
+    }
+    
+    gameMode = room.mode;
+    
+    // Assign player role and team
+    playerRole = 'p' + (playerCount + 1);
+    
+    // Team assignment logic
+    if(gameMode === '1v1') {
+      myTeam = 'B';
+    } else if(gameMode === '1v2') {
+      myTeam = playerCount === 1 ? 'B' : 'B'; // p2 and p3 are both team B
+    } else if(gameMode === '2v2') {
+      myTeam = playerCount === 1 ? 'B' : (playerCount === 2 ? 'A' : 'B');
+    }
+    
+    roomRef.child('players/' + playerRole).set({
+      connected: true,
+      beast: null,
+      trainer: null,
+      ready: false,
+      team: myTeam
+    });
+    
+    document.getElementById('waiting-msg').innerText = 'JOINED ROOM: ' + roomCode;
+    document.getElementById('waiting-msg').style.display = 'block';
+    
+    // Listen for all players
+    roomRef.child('players').on('value', (snapshot) => {
+      const players = snapshot.val();
+      if(players && Object.keys(players).length >= requiredPlayers) {
+        startSelection();
+      } else if(players) {
+        const count = Object.keys(players).length;
+        document.getElementById('waiting-msg').innerText = `WAITING... (${count}/${requiredPlayers})`;
+      }
+    });
+  });
+}
+
+function cancelRoom() {
+  if(roomRef) {
+    roomRef.remove();
+  }
+  document.getElementById('mode-selection').style.display = 'flex';
+  document.getElementById('room-screen').style.display = 'none';
+  document.getElementById('room-code-display').style.display = 'none';
+  document.getElementById('waiting-msg').style.display = 'none';
+}
+
+// ============ SELECTION PHASE ============
+function startSelection() {
+  document.getElementById('room-screen').style.display = 'none';
+  document.getElementById('selection-screen').style.display = 'flex';
+  loadBeasts();
+  
+  // Listen for opponent selections
+  roomRef.child('players').on('value', (snapshot) => {
+    checkIfAllReady(snapshot.val());
+  });
+}
+
+function loadBeasts() {
+  const r = document.getElementById('roster');
+  r.innerHTML = "";
+  let pool = Object.keys(db).filter(n => n !== "Vibhamon");
+  pool.forEach(n => {
+    r.innerHTML += `<div class="card" onclick="pick('${n}')" style="--b-color:${db[n].color}"><div class="beast-name">${n}</div><div class="beast-type">${db[n].type}</div></div>`;
+  });
+  r.innerHTML += `<div class="card random-card" onclick="pickRandom()" style="--b-color:var(--cyber-blue)"><div class="beast-name">? ? ?</div><div class="beast-type">RANDOM</div></div>`;
+}
+
+function loadTrainers() {
+  const r = document.getElementById('roster');
+  r.innerHTML = "";
+  Object.keys(trainers).forEach(n => {
+    if(n === "Lord Keshav") return;
+    r.innerHTML += `<div class="card" onclick="pickTrainer('${n}')" style="--b-color:${trainers[n].c}"><div class="beast-name">${n}</div><div class="beast-type" style="color:#fff; margin-bottom: 2px;">${trainers[n].name}</div><div style="font-size:0.5rem; color:#aaa; line-height:1;">${trainers[n].d}</div></div>`;
+  });
+  r.innerHTML += `<div class="card random-card" onclick="pickRandomTrainer()" style="--b-color:var(--cyber-blue)"><div class="beast-name">? ? ?</div><div class="beast-type">RANDOM</div></div>`;
+}
+
+function pickRandom() {
+  const k = Object.keys(db).filter(n => n !== "Vibhamon");
+  pick(k[Math.floor(Math.random()*k.length)]);
+}
+
+function pickRandomTrainer() {
+  const k = Object.keys(trainers).filter(n => n !== "Lord Keshav");
+  pickTrainer(k[Math.floor(Math.random()*k.length)]);
+}
+
+function pick(n) {
+  mySelection.beast = n;
+  roomRef.child('players/' + playerRole + '/beast').set(n);
+  document.getElementById('sel-hint').innerText = "[ SELECT YOUR TRAINER ]";
+  loadTrainers();
+}
+
+function pickTrainer(n) {
+  mySelection.trainer = n;
+  roomRef.child('players/' + playerRole + '/trainer').set(n);
+  roomRef.child('players/' + playerRole + '/ready').set(true);
+  document.getElementById('sel-hint').innerText = "[ WAITING FOR OPPONENTS... ]";
+}
+
+function checkIfAllReady(playersData) {
+  if(!playersData) return;
+  
+  const playerList = Object.values(playersData);
+  const requiredPlayers = gameMode === '1v1' ? 2 : gameMode === '1v2' ? 3 : 4;
+  
+  if(playerList.length < requiredPlayers) return;
+  
+  const allReady = playerList.every(p => p.ready);
+  
+  if(allReady && !gameStarted) {
+    gameStarted = true;
+    initializeBattle(playersData);
+  }
+}
+
+// ============ BATTLE INITIALIZATION ============
+function initializeBattle(playersData) {
+  document.getElementById('selection-screen').style.display = 'none';
+  document.getElementById('battle-screen').style.display = 'flex';
+  
+  // Create player objects
+  players = {};
+  const playerKeys = Object.keys(playersData);
+  
+  playerKeys.forEach(key => {
+    const playerData = playersData[key];
+    players[key] = {
+      ...db[playerData.beast],
+      n: playerData.beast,
+      cur: db[playerData.beast].hp,
+      stun: 0, bleed: 0, weak: 0, shield: 0, shieldLock: false,
+      buff: 0, accMod: 0, evasion: 0, used: [], lastMoveName: null,
+      revived: 0, hasDealtDmg: false,
+      items: {HP:1, ANTI:1, BUFF:1, BKUP:1},
+      trainer: playerData.trainer,
+      trId: trainers[playerData.trainer].id,
+      trColor: trainers[playerData.trainer].c,
+      role: key,
+      team: playerData.team
+    };
+    
+    // Apply trainer bonuses
+    if(players[key].trId === "SHUBHAN") players[key].items.HP += 1;
+    if(players[key].trId === "NEIL") players[key].items.BKUP = 2;
+  });
+  
+  // Determine turn order
+  turnOrder = playerKeys.sort();
+  currentTurnIndex = 0;
+  turn = turnOrder[currentTurnIndex];
+  
+  // Initialize game state in Firebase
+  if(isHost) {
+    gameStateRef = roomRef.child('gameState');
+    const initialState = {
+      turn: turn,
+      turnOrder: turnOrder,
+      currentAction: null
+    };
+    
+    playerKeys.forEach(key => {
+      initialState[key] = serializePlayer(players[key]);
+    });
+    
+    gameStateRef.set(initialState);
+  } else {
+    gameStateRef = roomRef.child('gameState');
+  }
+  
+  setupBattleUI();
+  
+  // Listen for game state changes
+  gameStateRef.on('value', (snapshot) => {
+    if(!snapshot.exists()) return;
+    syncGameState(snapshot.val());
+  });
+  
+  // Handle item stealing
+  handleItemStealing();
+}
+
+function setupBattleUI() {
+  const hudContainer = document.getElementById('battle-hud-container');
+  const arenaContainer = document.getElementById('arena-flex');
+  
+  hudContainer.innerHTML = '';
+  arenaContainer.innerHTML = '';
+  
+  // Sort players by team for display
+  const teamA = Object.values(players).filter(p => p.team === 'A');
+  const teamB = Object.values(players).filter(p => p.team === 'B');
+  
+  // Create HUDs
+  [...teamA, ...teamB].forEach(p => {
+    hudContainer.innerHTML += `
+      <div class="player-hud team-${p.team.toLowerCase()}" id="hud-${p.role}">
+        <div class="player-name-row">
+          <span style="font-weight:900; color:${p.color};">${p.n}</span>
+          <span style="color:var(--cyber-blue); font-size:0.7rem;" id="shield-${p.role}"></span>
+        </div>
+        <div class="hp-rail-flex">
+          <div class="hp-bar-flex" id="bar-${p.role}" style="--b-color:${p.color}"></div>
+        </div>
+        <div style="font-size:0.7rem; color:#888;" id="hp-${p.role}">CORE: ${p.cur}/${p.hp}</div>
+        <div style="font-size:0.6rem; color:${p.trColor}; margin-top:2px;">TR: ${p.trainer}</div>
+        <div class="status-row" id="status-${p.role}"></div>
+        <div class="items-row" id="items-${p.role}">
+          <span class="item-badge">HP:${p.items.HP}</span>
+          <span class="item-badge">ANTI:${p.items.ANTI}</span>
+          <span class="item-badge">BUFF:${p.items.BUFF}</span>
+          <span class="item-badge">BKUP:${p.items.BKUP}</span>
+        </div>
+      </div>
+    `;
+    
+    // Create sprite
+    arenaContainer.innerHTML += `
+      <div class="sprite-flex team-${p.team.toLowerCase()}" id="sprite-${p.role}" style="--b-color:${p.color}; border-color:${p.color};">
+        ${p.n[0]}
+      </div>
+    `;
+  });
+  
+  updateUI();
+}
+
+function handleItemStealing() {
+  let thiefMsg = "";
+  
+  Object.values(players).forEach(p => {
+    if(p.trId === "RISHIT") {
+      // Find opponents
+      const opponents = Object.values(players).filter(opp => opp.team !== p.team);
+      if(opponents.length > 0) {
+        const victim = opponents[Math.floor(Math.random() * opponents.length)];
+        thiefMsg += stealItem(p, victim);
+      }
+    }
+  });
+  
+  if(thiefMsg) {
+    const t = document.getElementById('ticker');
+    t.innerHTML = `<div class='crit-text' style='color:#ff6600; font-size:1.2rem'>${thiefMsg}</div>`;
+    setTimeout(() => { t.innerHTML = ""; showMain(); }, 2500);
+  } else {
+    showMain();
+  }
+}
+
+function stealItem(thief, victim) {
+  const avail = Object.keys(victim.items).filter(k => victim.items[k] > 0);
+  if(avail.length > 0) {
+    const s = avail[Math.floor(Math.random() * avail.length)];
+    victim.items[s]--;
+    thief.items[s]++;
+    return `${thief.role.toUpperCase()} STOLE ${s} FROM ${victim.role.toUpperCase()}! `;
+  }
+  return "";
+}
+
+function serializePlayer(p) {
+  if(!p) return null;
+  return {
+    n: p.n, hp: p.hp, cur: p.cur, stun: p.stun, bleed: p.bleed,
+    weak: p.weak, shield: p.shield, shieldLock: p.shieldLock,
+    buff: p.buff, accMod: p.accMod, evasion: p.evasion,
+    used: p.used, lastMoveName: p.lastMoveName, revived: p.revived,
+    hasDealtDmg: p.hasDealtDmg, items: p.items, role: p.role, team: p.team
+  };
+}
+
+function deserializePlayer(data, original) {
+  if(!data || !original) return original;
+  return {
+    ...original,
+    cur: data.cur, stun: data.stun, bleed: data.bleed,
+    weak: data.weak, shield: data.shield, shieldLock: data.shieldLock,
+    buff: data.buff, accMod: data.accMod, evasion: data.evasion,
+    used: data.used, lastMoveName: data.lastMoveName, revived: data.revived,
+    hasDealtDmg: data.hasDealtDmg, items: data.items
+  };
+}
+
+function syncGameState(state) {
+  if(!state) return;
+  
+  // Update all players
+  Object.keys(players).forEach(key => {
+    if(state[key]) {
+      players[key] = deserializePlayer(state[key], players[key]);
+    }
+  });
+  
+  turn = state.turn;
+  updateUI();
+  
+  // Handle current action
+  if(state.currentAction && state.currentAction.processed === false && state.currentAction.player !== playerRole) {
+    processOpponentAction(state.currentAction);
+  }
+}
+
+// ============ UI UPDATE ============
+function updateUI() {
+  Object.values(players).forEach(p => {
+    // Update HP bar
+    const bar = document.getElementById(`bar-${p.role}`);
+    if(bar) bar.style.width = (Math.max(0, p.cur) / p.hp * 100) + "%";
+    
+    // Update HP text
+    const hpText = document.getElementById(`hp-${p.role}`);
+    if(hpText) hpText.innerText = `CORE: ${Math.max(0, Math.floor(p.cur))}/${p.hp}`;
+    
+    // Update shield
+    const shield = document.getElementById(`shield-${p.role}`);
+    if(shield) shield.innerText = p.shield > 0 ? `SHIELD:${p.shield}` : (p.shieldLock ? "[LOCK]" : "");
+    
+    // Update status
+    const status = document.getElementById(`status-${p.role}`);
+    if(status) {
+      let st = [];
+      if(p.bleed > 0) st.push(`BLEED(${p.bleed})`);
+      if(p.weak > 0) st.push(`WEAK(${p.weak})`);
+      if(p.buff > 0) st.push("BUFFED");
+      if(p.evasion > 0) st.push("EVA");
+      status.innerText = st.join(" | ");
+    }
+    
+    // Update items
+    const items = document.getElementById(`items-${p.role}`);
+    if(items) {
+      items.innerHTML = `
+        <span class="item-badge">HP:${p.items.HP}</span>
+        <span class="item-badge">ANTI:${p.items.ANTI}</span>
+        <span class="item-badge">BUFF:${p.items.BUFF}</span>
+        <span class="item-badge">BKUP:${p.items.BKUP}</span>
+      `;
+    }
+    
+    // Highlight active player
+    const hud = document.getElementById(`hud-${p.role}`);
+    if(hud) {
+      if(p.role === turn) {
+        hud.classList.add('active-player');
+      } else {
+        hud.classList.remove('active-player');
+      }
+    }
+    
+    // Highlight active sprite
+    const sprite = document.getElementById(`sprite-${p.role}`);
+    if(sprite) {
+      if(p.role === turn) {
+        sprite.classList.add('active-sprite');
+      } else {
+        sprite.classList.remove('active-sprite');
+      }
+    }
+  });
+}
+
+function showMain() {
+  document.getElementById('ticker').innerText = "";
+  
+  // Only show controls if it's your turn
+  const isMyTurn = turn === playerRole;
+  
+  if(isMyTurn) {
+    document.getElementById('cat-att').style.display = 'block';
+    document.getElementById('cat-itm').style.display = 'block';
+  } else {
+    document.getElementById('cat-att').style.display = 'none';
+    document.getElementById('cat-itm').style.display = 'none';
+    const currentPlayer = players[turn];
+    document.getElementById('ticker').innerText = `${currentPlayer.n.toUpperCase()}'S TURN...`;
+  }
+  
+  for(let i=0;i<4;i++) {
+    document.getElementById('b'+i).style.display='none';
+    document.getElementById('b'+i).classList.remove('selected');
+  }
+  document.getElementById('exec-trigger').style.display='none';
+}
+
+function showSub(m) {
+  document.getElementById('cat-att').style.display='none';
+  document.getElementById('cat-itm').style.display='none';
+  const a = players[turn];
+  
+  // Find opponents (different team)
+  const opponents = Object.values(players).filter(p => p.team !== a.team && p.cur > 0);
+  
+  if(m==='ATTACK') {
+    a.moves.forEach((mv,i)=>{
+      let b=document.getElementById('b'+i);
+      b.style.display='block';
+      b.innerText=mv.n;
+      b.disabled = (a.used.includes(mv.n) || (mv.t === "SHIELD" && a.shieldLock));
+      b.onclick=()=>prep(mv,i,false);
+    });
+  } else {
+    const itms=[
+      {n:"HP POTION",t:"HP",v:a.items.HP,d:"+7 HP"},
+      {n:"ANTI",t:"ANTI",v:a.items.ANTI,d:"Clear status"},
+      {n:"BUFF",t:"BUFF",v:a.items.BUFF,d:"+3 DMG & +10% ACC"},
+      {n:"BACKUP",t:"BKUP",v:a.items.BKUP,d:"Revive Life"}
+    ];
+    
+    // Check if any opponent has NAYSHA
+    const oppHasNaysha = opponents.some(o => o.trId === "NAYSHA");
+    
+    itms.forEach((it,i)=>{
+      let b=document.getElementById('b'+i);
+      b.style.display='block';
+      b.innerText=`${it.n}(${it.v})`;
+      b.disabled = (it.v<=0 || (oppHasNaysha && (it.t === "HP" || it.t === "ANTI")));
+      b.onclick=()=>prep(it,i,true);
+    });
+  }
+}
+
+function prep(m,i,isItm) {
+  const a = players[turn];
+  const opponents = Object.values(players).filter(p => p.team !== a.team && p.cur > 0);
+  const o = opponents[0]; // Primary opponent for calculations
+  
+  curM = {...m, isItem:isItm};
+  
+  for(let j=0;j<4;j++) document.getElementById('b'+j).classList.remove('selected');
+  if(i !== -1) document.getElementById('b'+i).classList.add('selected');
+  
+  document.getElementById('c-title').innerText=m.n;
+  
+  let acc = m.p || 100;
+  let mods = a.accMod;
+  const isSp = (m.t === "DMG" || m.t === "RAND_DMG" || m.t === "STUN" || m.t === "SILENCE" || m.t === "PERCENT" || m.t === "SPEECH_STUN");
+  
+  if(o && !isItm && o.trId === "UDAY" && isSp && m.t !== "WIS" && m.t !== "SHIELD") mods -= 15;
+  if(!isItm && a.trId === "CHAHAK" && isSp) mods += 10;
+  if(o && !isItm && o.trId === "KESHAV" && isSp && m.t !== "WIS" && m.t !== "SHIELD") mods -= 15;
+  if(!isItm && a.trId === "KESHAV" && isSp) mods += 10;
+  
+  document.getElementById('c-acc').innerText=(isItm ? 100 : Math.min(100, acc + mods)) + "%";
+  
+  let d = m.val || "EFF";
+  if(m.t === "RISK") d = 10;
+  if(a.trId === "CHAHAK" && isSp && !isNaN(d)) d = parseInt(d)+2;
+  if(a.trId === "KESHAV" && isSp && !isNaN(d)) d = parseInt(d)+2;
+  
+  document.getElementById('c-dmg').innerText=d;
+  document.getElementById('c-desc').innerText=`// ${m.d||"Active"}`;
+  
+  document.getElementById('exec-trigger').style.display='block';
+}
+
+// ============ ACTION HANDLING ============
+function handleAction() {
+  if(turn !== playerRole) return;
+  
+  document.getElementById('exec-trigger').style.display='none';
+  
+  // Send action to Firebase
+  gameStateRef.child('currentAction').set({
+    player: playerRole,
+    move: curM,
+    processed: false,
+    timestamp: firebase.database.ServerValue.TIMESTAMP
+  });
+  
+  // Process action locally
+  executeAction();
+}
+
+function executeAction() {
+  const att = players[turn];
+  const opponents = Object.values(players).filter(p => p.team !== att.team && p.cur > 0);
+  
+  // Select random alive opponent as target
+  const def = opponents[Math.floor(Math.random() * opponents.length)];
+  
+  if(!def && !curM.isItem) {
+    // No valid targets, end turn
+    setTimeout(checkDeath, 500);
+    return;
+  }
+  
+  const t = document.getElementById('ticker');
+  const sDef = def ? document.getElementById(`sprite-${def.role}`) : null;
+  
+  let msg = "";
+  
+  if(curM.isItem) {
+    if(curM.t==='HP') att.cur=Math.min(att.hp, att.cur+7);
+    if(curM.t==='ANTI') { att.stun=0; att.bleed=0; att.weak=0; }
+    if(curM.t==='BUFF') { att.buff=3; att.accMod=10; }
+    att.items[curM.t]--;
+    t.innerHTML="<div class='crit-text' style='color:#0f0; border-color:#0f0'>[ FIXED ]</div>";
+  } else {
+    let hit = (curM.p || 100) + att.accMod;
+    const isSp = (curM.t === "DMG" || curM.t === "RAND_DMG" || curM.t === "STUN" || curM.t === "SILENCE" || curM.t === "PERCENT" || curM.t === "SPEECH_STUN");
+    
+    if(def.trId === "UDAY" && isSp && curM.t !== "WIS" && curM.t !== "SHIELD") hit -= 15;
+    if(att.trId === "CHAHAK" && isSp) hit += 10;
+    if(def.trId === "KESHAV" && isSp && curM.t !== "WIS" && curM.t !== "SHIELD") hit -= 15;
+    if(att.trId === "KESHAV" && isSp) hit += 10;
+    if(def.evasion > 0) { hit -= 50; def.evasion = 0; }
+    
+    let dodged = false;
+    if(def.trId === "ADVIK" && (isSp || att.buff > 0)) { if(Math.random() < 0.2) dodged = true; }
+    if(def.trId === "KESHAV" && (isSp || att.buff > 0)) { if(Math.random() < 0.2) dodged = true; }
+    
+    if(Math.random()*100 > hit || dodged) {
+      t.innerHTML = dodged ? "<div class='crit-text' style='color:#ff4500;'>[ DODGED ]</div>" : "<div class='crit-text' style='color:#888; border-color:#888'>[ MISSED ]</div>";
+      att.accMod = 0;
+    } else {
+      let d = (curM.val||0);
+      if(curM.t==="RAND_DMG") d = Math.floor(Math.random()*(curM.max-curM.min+1))+curM.min;
+      if(curM.t==="RISK") { att.cur = Math.max(1, att.cur - 8); d = 10; }
+      if(curM.t==="WIS") d = (def.cur > att.cur) ? Math.floor(def.cur / 2) : 0;
+      if(curM.t==="DS") d = (def.cur < (def.hp * 0.3)) ? def.cur : 2;
+      if(curM.t==="PERCENT") d = Math.floor(att.cur * 0.5);
+      if(curM.t==="SPEECH_STUN") { def.stun = 3; d = 0; }
+      if(curM.t==="HEAL") { att.cur = Math.min(att.hp, att.cur+3); d=0; msg="[ HEALED ]"; }
+      if(curM.t==="SWAP") { let tmp = att.cur; att.cur = def.cur; def.cur = tmp; d = 0; msg="[ SWAPPED ]"; }
+      if(curM.t==="BLEED" || curM.t==="BLEED_RAND") def.bleed = 3;
+      if(curM.t==="WEAK") def.weak = 3;
+      if(curM.t==="STUN" || curM.t==="SILENCE") def.stun = (curM.n === "Silence" || curM.n === "Intimidate" || curM.n === "Bald Shine") ? 1 : 2;
+      if(curM.t==="EVA") { att.evasion = 1; msg="[ EVASIVE ]"; }
+      
+      if(att.weak > 0 && d > 0) d = Math.floor(d/2);
+      if(att.trId === "CHAHAK" && isSp && d > 0) d += 2;
+      if(att.trId === "KESHAV" && isSp && d > 0) d += 2;
+      
+      if(def.shield > 0 && (d > 0 || curM.t === "WRATH")) {
+        if(att.buff > 0) {
+          def.shield = 0;
+          def.shieldLock = true;
+          msg = "<div class='crit-text' style='color:#ff00ea; border-color:#ff00ea'>[ BROKEN ]</div>";
+        } else if(curM.t === "WRATH" || curM.t === "RISK") {
+          def.shield = 0;
+          msg = "<div class='crit-text' style='color:#ff00ea; border-color:#ff00ea'>[ PIERCED ]</div>";
+        } else {
+          d = 0;
+          def.shield--;
+          msg = "<div class='crit-text' style='color:#00f3ff; border-color:#00f3ff'>[ BLOCKED ]</div>";
+        }
+      }
+      
+      if(att.buff > 0 && d > 0) { d += 3; if(!dodged) att.buff = 0; }
+      att.accMod = 0;
+      
+      if(curM.t==="WRATH") { def.cur=1; d=0; msg="[ WRATH ]"; }
+      if(curM.t==="LEECH") { att.cur = Math.min(att.hp, att.cur + d); }
+      if(curM.t==="SHIELD" && !att.shieldLock) { att.shield = 3; msg="[ SHIELD UP ]"; }
+      
+      def.cur=Math.max(0, def.cur-d);
+      if(d>0 && sDef) { sDef.classList.add('shake'); att.hasDealtDmg = true; }
+      
+      if(def.trId === "ADYA" && (d >= 0)) {
+        att.cur = Math.max(0, att.cur - 1);
+        msg = msg ? msg + " + [RECOIL]" : "[ RECOIL ]";
+      }
+      if(def.trId === "KESHAV" && (d >= 0)) {
+        att.cur = Math.max(0, att.cur - 1);
+        msg = msg ? msg + " + [RECOIL]" : "[ RECOIL ]";
+      }
+      
+      t.innerHTML = msg || `<div class='crit-text'>-[ ${Math.floor(d)} ]</div>`;
+    }
+    
+    if(curM.once) att.used.push(curM.n);
+    att.lastMoveName = curM.n;
+  }
+  
+  updateUI();
+  
+  // Update Firebase with new state
+  const stateUpdate = { 'currentAction/processed': true };
+  Object.keys(players).forEach(key => {
+    stateUpdate[key] = serializePlayer(players[key]);
+  });
+  gameStateRef.update(stateUpdate);
+  
+  setTimeout(checkDeath, 1000);
+}
+
+function processOpponentAction(action) {
+  if(action.player === playerRole) return;
+  gameStateRef.child('currentAction/processed').set(true);
+}
+
+function checkDeath() {
+  // Check each team
+  const teamAAlive = Object.values(players).filter(p => p.team === 'A' && p.cur > 0);
+  const teamBAlive = Object.values(players).filter(p => p.team === 'B' && p.cur > 0);
+  
+  // Check for backup usage
+  Object.values(players).forEach(p => {
+    if(p.cur <= 0 && p.items.BKUP > 0) {
+      p.revived++;
+      let h = p.revived === 1 ? 5 : 3;
+      p.cur = h;
+      p.items.BKUP--;
+      p.bleed = 0;
+      p.stun = 0;
+      if(p.trId === "AAYANSH") { p.buff = 3; p.accMod = 10; }
+      if(p.trId === "KESHAV") { p.buff = 3; p.accMod = 10; }
+      
+      const t = document.getElementById('ticker');
+      t.innerHTML = `<div class='crit-text' style='color:#0f0'>${p.n.toUpperCase()} ${p.revived === 2 ? "IS STILL THERE" : "REBOOTING"}</div>`;
+      
+      updateUI();
+      
+      const stateUpdate = {};
+      Object.keys(players).forEach(key => {
+        stateUpdate[key] = serializePlayer(players[key]);
+      });
+      gameStateRef.update(stateUpdate);
+      
+      setTimeout(() => endTurn(), 1200);
+      return;
+    }
+  });
+  
+  // Recheck alive after backups
+  const teamAStillAlive = Object.values(players).filter(p => p.team === 'A' && p.cur > 0);
+  const teamBStillAlive = Object.values(players).filter(p => p.team === 'B' && p.cur > 0);
+  
+  if(teamAStillAlive.length === 0) {
+    alert("SYSTEM FAILURE: TEAM B WINS!");
+    if(roomRef) roomRef.remove();
+    location.href = 'index.html';
+    return;
+  }
+  
+  if(teamBStillAlive.length === 0) {
+    alert("SYSTEM FAILURE: TEAM A WINS!");
+    if(roomRef) roomRef.remove();
+    location.href = 'index.html';
+    return;
+  }
+  
+  setTimeout(() => endTurn(), 800);
+}
+
+function endTurn() {
+  const c = players[turn];
+  
+  if(c.bleed > 0 && c.cur > 0) { c.cur = Math.max(0, c.cur-1); c.bleed--; }
+  
+  if(c.trId === "NOEL" && c.hasDealtDmg) {
+    Object.values(players).filter(p => p.team !== c.team).forEach(o => {
+      o.cur = Math.max(0, o.cur - 2);
+    });
+  }
+  if(c.trId === "KESHAV" && c.hasDealtDmg) {
+    Object.values(players).filter(p => p.team !== c.team).forEach(o => {
+      o.cur = Math.max(0, o.cur - 2);
+    });
+  }
+  
+  updateUI();
+  
+  // Check for death again
+  const teamAAlive = Object.values(players).filter(p => p.team === 'A' && p.cur > 0);
+  const teamBAlive = Object.values(players).filter(p => p.team === 'B' && p.cur > 0);
+  
+  if(teamAAlive.length === 0 || teamBAlive.length === 0) {
+    checkDeath();
+    return;
+  }
+  
+  if(c.weak > 0) c.weak--;
+  c.hasDealtDmg = false;
+  
+  // Find next alive player in turn order
+  let nextIndex = (currentTurnIndex + 1) % turnOrder.length;
+  let attempts = 0;
+  
+  while(players[turnOrder[nextIndex]].cur <= 0 && attempts < turnOrder.length) {
+    nextIndex = (nextIndex + 1) % turnOrder.length;
+    attempts++;
+  }
+  
+  if(attempts >= turnOrder.length) {
+    checkDeath();
+    return;
+  }
+  
+  currentTurnIndex = nextIndex;
+  turn = turnOrder[currentTurnIndex];
+  
+  const n = players[turn];
+  
+  // Clear shake effects
+  Object.keys(players).forEach(key => {
+    const sprite = document.getElementById(`sprite-${key}`);
+    if(sprite) sprite.classList.remove('shake');
+  });
+  
+  if(n.stun > 0) {
+    n.stun--;
+    updateUI();
+    document.getElementById('ticker').innerHTML=`<div class='crit-text' style='color:#f00'>${n.n.toUpperCase()} [ STUNNED ]</div>`;
+    
+    const stateUpdate = { turn: turn };
+    Object.keys(players).forEach(key => {
+      stateUpdate[key] = serializePlayer(players[key]);
+    });
+    gameStateRef.update(stateUpdate);
+    
+    setTimeout(() => endTurn(), 1000);
+  } else {
+    const stateUpdate = { turn: turn };
+    Object.keys(players).forEach(key => {
+      stateUpdate[key] = serializePlayer(players[key]);
+    });
+    gameStateRef.update(stateUpdate);
+    
+    showMain();
+  }
+}
+
+// Cleanup on disconnect
+window.addEventListener('beforeunload', () => {
+  if(roomRef) {
+    roomRef.child('players/' + playerRole + '/connected').set(false);
+  }
+});
+</script>
+</body>
+</html>
