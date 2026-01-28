@@ -6,32 +6,135 @@
 <title>Subsi ki Jang - Online Mode</title>
 <link rel="stylesheet" href="game-styles.css">
 <style>
+/* Enhanced Mode Selection Screen */
 #mode-selection {
   position: absolute;
   inset: 0;
   z-index: 100;
-  background: #020202;
+  background: linear-gradient(135deg, #000000 0%, #0a0a1a 50%, #000000 100%);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   padding: 20px;
+  overflow: hidden;
 }
 
+#mode-selection::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: 
+    repeating-linear-gradient(0deg, transparent 0px, transparent 2px, rgba(0, 243, 255, 0.03) 2px, rgba(0, 243, 255, 0.03) 4px),
+    repeating-linear-gradient(90deg, transparent 0px, transparent 2px, rgba(0, 243, 255, 0.03) 2px, rgba(0, 243, 255, 0.03) 4px);
+  animation: gridMove 20s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes gridMove {
+  0% { transform: translate(0, 0); }
+  100% { transform: translate(40px, 40px); }
+}
+
+#mode-selection h1 {
+  color: #fff;
+  font-size: 4rem;
+  margin-bottom: 50px;
+  text-shadow: 
+    0 0 10px var(--cyber-blue),
+    0 0 20px var(--cyber-blue),
+    0 0 30px var(--cyber-blue),
+    4px 4px 0px rgba(0, 243, 255, 0.5);
+  animation: titleFloat 3s ease-in-out infinite, titleGlow 2s ease-in-out infinite alternate;
+  letter-spacing: 15px;
+  position: relative;
+  z-index: 2;
+}
+
+@keyframes titleFloat {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-15px); }
+}
+
+@keyframes titleGlow {
+  0% { 
+    text-shadow: 
+      0 0 10px var(--cyber-blue),
+      0 0 20px var(--cyber-blue),
+      0 0 30px var(--cyber-blue),
+      4px 4px 0px rgba(0, 243, 255, 0.5);
+  }
+  100% { 
+    text-shadow: 
+      0 0 20px var(--cyber-blue),
+      0 0 40px var(--cyber-blue),
+      0 0 60px var(--cyber-blue),
+      4px 4px 0px rgba(0, 243, 255, 0.8);
+  }
+}
+
+/* Enhanced Room Screen */
 #room-screen {
   position: absolute;
   inset: 0;
   z-index: 100;
-  background: #020202;
+  background: linear-gradient(135deg, #000000 0%, #1a0a0a 50%, #000000 100%);
   display: none;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   padding: 20px;
+  overflow: hidden;
+}
+
+#room-screen::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: 
+    radial-gradient(circle at 20% 50%, rgba(0, 243, 255, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 80% 50%, rgba(255, 0, 85, 0.1) 0%, transparent 50%);
+  animation: pulseGlow 4s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes pulseGlow {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+#room-title {
+  color: #fff;
+  font-size: 3rem;
+  margin-bottom: 30px;
+  text-shadow: 
+    0 0 10px #ff0055,
+    0 0 20px #ff0055,
+    0 0 30px #ff0055;
+  animation: titleFloat 3s ease-in-out infinite, roomTitlePulse 2s ease-in-out infinite;
+  letter-spacing: 8px;
+  position: relative;
+  z-index: 2;
+}
+
+@keyframes roomTitlePulse {
+  0%, 100% {
+    text-shadow: 
+      0 0 10px #ff0055,
+      0 0 20px #ff0055,
+      0 0 30px #ff0055;
+  }
+  50% {
+    text-shadow: 
+      0 0 20px #ff0055,
+      0 0 40px #ff0055,
+      0 0 60px #ff0055,
+      0 0 80px #ff0055;
+  }
 }
 
 .mode-choice-btn {
-  background: #000;
+  background: linear-gradient(135deg, #000 0%, #1a1a2e 100%);
   color: var(--cyber-blue);
   border: 2px solid var(--cyber-blue);
   padding: 20px 60px;
@@ -40,17 +143,59 @@
   font-family: 'Courier New';
   font-weight: 900;
   font-size: 1.5rem;
-  transition: 0.2s;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 
+    0 0 10px rgba(0, 243, 255, 0.3),
+    inset 0 0 10px rgba(0, 243, 255, 0.1);
+  clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+}
+
+.mode-choice-btn::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, transparent 0%, var(--cyber-blue) 100%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.mode-choice-btn::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(0, 243, 255, 0.5);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
 }
 
 .mode-choice-btn:hover {
-  background: var(--cyber-blue);
+  background: linear-gradient(135deg, var(--cyber-blue) 0%, #00a8cc 100%);
   color: #000;
-  transform: scale(1.05);
+  transform: scale(1.05) translateY(-5px);
+  box-shadow: 
+    0 10px 30px rgba(0, 243, 255, 0.5),
+    inset 0 0 20px rgba(255, 255, 255, 0.2);
+  border-color: #fff;
 }
 
+.mode-choice-btn:hover::after {
+  width: 300px;
+  height: 300px;
+}
+
+.mode-choice-btn:active {
+  transform: scale(0.98) translateY(-3px);
+}
+
+/* Enhanced Room Input */
 .room-input {
-  background: #000;
+  background: linear-gradient(135deg, #000 0%, #0a0a1a 100%);
   color: var(--cyber-blue);
   border: 2px solid var(--cyber-blue);
   padding: 15px 30px;
@@ -60,10 +205,29 @@
   margin: 10px;
   width: 300px;
   text-transform: uppercase;
+  box-shadow: 
+    0 0 15px rgba(0, 243, 255, 0.3),
+    inset 0 0 15px rgba(0, 243, 255, 0.1);
+  transition: all 0.3s ease;
+  position: relative;
 }
 
+.room-input::placeholder {
+  color: rgba(0, 243, 255, 0.5);
+}
+
+.room-input:focus {
+  outline: none;
+  border-color: #fff;
+  box-shadow: 
+    0 0 25px rgba(0, 243, 255, 0.6),
+    inset 0 0 25px rgba(0, 243, 255, 0.2);
+  background: linear-gradient(135deg, #0a0a1a 0%, #1a1a2e 100%);
+}
+
+/* Enhanced Room Buttons */
 .room-btn {
-  background: #000;
+  background: linear-gradient(135deg, #000 0%, #1a1a2e 100%);
   color: var(--cyber-blue);
   border: 2px solid var(--cyber-blue);
   padding: 15px 40px;
@@ -72,32 +236,148 @@
   font-family: 'Courier New';
   font-weight: 900;
   font-size: 1.1rem;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 
+    0 0 10px rgba(0, 243, 255, 0.3),
+    inset 0 0 10px rgba(0, 243, 255, 0.1);
+  clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+}
+
+.room-btn::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  transition: left 0.5s;
+}
+
+.room-btn:hover::before {
+  left: 100%;
 }
 
 .room-btn:hover {
-  background: var(--cyber-blue);
+  background: linear-gradient(135deg, var(--cyber-blue) 0%, #00a8cc 100%);
   color: #000;
+  transform: translateY(-3px);
+  box-shadow: 
+    0 5px 20px rgba(0, 243, 255, 0.5),
+    inset 0 0 20px rgba(255, 255, 255, 0.2);
+  border-color: #fff;
 }
 
+.room-btn:active {
+  transform: translateY(-1px);
+}
+
+/* Enhanced Waiting Message */
 #waiting-msg {
   color: #fff;
   font-size: 1.2rem;
   margin: 20px;
   display: none;
-  animation: pulse 1.5s infinite;
+  animation: waitingPulse 1.5s ease-in-out infinite;
+  text-shadow: 
+    0 0 10px var(--cyber-blue),
+    0 0 20px var(--cyber-blue);
+  position: relative;
+  z-index: 2;
 }
 
+@keyframes waitingPulse {
+  0%, 100% { 
+    opacity: 1; 
+    transform: scale(1);
+    text-shadow: 
+      0 0 10px var(--cyber-blue),
+      0 0 20px var(--cyber-blue);
+  }
+  50% { 
+    opacity: 0.5; 
+    transform: scale(1.05);
+    text-shadow: 
+      0 0 20px var(--cyber-blue),
+      0 0 40px var(--cyber-blue),
+      0 0 60px var(--cyber-blue);
+  }
+}
+
+/* Enhanced Room Code Display */
 #room-code-display {
   color: #0f0;
   font-size: 2rem;
   margin: 20px;
   letter-spacing: 5px;
   display: none;
+  animation: codeGlow 2s ease-in-out infinite;
+  padding: 15px 30px;
+  border: 2px solid #0f0;
+  background: rgba(0, 255, 0, 0.1);
+  box-shadow: 
+    0 0 20px rgba(0, 255, 0, 0.5),
+    inset 0 0 20px rgba(0, 255, 0, 0.1);
+  clip-path: polygon(15px 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%, 0 15px);
+  position: relative;
+  z-index: 2;
 }
 
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+@keyframes codeGlow {
+  0%, 100% {
+    box-shadow: 
+      0 0 20px rgba(0, 255, 0, 0.5),
+      inset 0 0 20px rgba(0, 255, 0, 0.1);
+    text-shadow: 0 0 10px #0f0;
+  }
+  50% {
+    box-shadow: 
+      0 0 40px rgba(0, 255, 0, 0.8),
+      inset 0 0 40px rgba(0, 255, 0, 0.2);
+    text-shadow: 0 0 20px #0f0, 0 0 30px #0f0;
+  }
+}
+
+#room-code {
+  font-weight: 900;
+  letter-spacing: 8px;
+}
+
+/* Cancel Button Special Styling */
+.room-btn[onclick="cancelRoom()"] {
+  border-color: #f00;
+  color: #f00;
+  background: linear-gradient(135deg, #000 0%, #2e1a1a 100%);
+  box-shadow: 
+    0 0 10px rgba(255, 0, 0, 0.3),
+    inset 0 0 10px rgba(255, 0, 0, 0.1);
+}
+
+.room-btn[onclick="cancelRoom()"]:hover {
+  background: linear-gradient(135deg, #f00 0%, #cc0000 100%);
+  color: #000;
+  box-shadow: 
+    0 5px 20px rgba(255, 0, 0, 0.5),
+    inset 0 0 20px rgba(255, 255, 255, 0.2);
+  border-color: #fff;
+}
+
+/* Container for Host/Join sections */
+#room-screen > div[style*="display: flex"] {
+  position: relative;
+  z-index: 2;
+}
+
+#room-screen h2 {
+  text-shadow: 0 0 10px currentColor;
+  animation: subtitlePulse 2s ease-in-out infinite;
+}
+
+@keyframes subtitlePulse {
+  0%, 100% { text-shadow: 0 0 10px currentColor; }
+  50% { text-shadow: 0 0 20px currentColor, 0 0 30px currentColor; }
 }
 
 /* Flexible Battle HUD */
@@ -184,10 +464,7 @@
   align-items: center;
   gap: 20px;
   padding: 20px;
-  background: radial-gradient(circle at center, rgba(0, 243, 255, 0.2) 0%, transparent 75%),
-              linear-gradient(rgba(0,0,0,0.9), rgba(0,0,0,0.5)),
-              repeating-linear-gradient(0deg, transparent 0, transparent 1px, rgba(0, 243, 255, 0.1) 1px, transparent 2px) 0 0 / 100% 40px,
-              repeating-linear-gradient(90deg, transparent 0, transparent 1px, rgba(0, 243, 255, 0.1) 1px, transparent 2px) 0 0 / 40px 100%;
+  background: radial-gradient(circle at center, rgba(0, 243, 255, 0.2) 0%, transparent 75%), linear-gradient(rgba(0,0,0,0.9), rgba(0,0,0,0.5)), repeating-linear-gradient(0deg, transparent 0, transparent 1px, rgba(0, 243, 255, 0.1) 1px, transparent 2px) 0 0 / 100% 40px, repeating-linear-gradient(90deg, transparent 0, transparent 1px, rgba(0, 243, 255, 0.1) 1px, transparent 2px) 0 0 / 40px 100%;
 }
 
 .sprite-flex {
@@ -228,7 +505,7 @@
 
 <!-- Mode Selection Screen -->
 <div id="mode-selection">
-<h1 style="color: #fff; font-size: 4rem; margin-bottom: 50px; text-shadow: 4px 4px 0px var(--cyber-blue);">ONLINE MODE</h1>
+<h1>ONLINE MODE</h1>
 <button class="mode-choice-btn" onclick="selectGameMode('1v1')">1v1 MODE</button>
 <button class="mode-choice-btn" onclick="selectGameMode('1v2')">1v2 MODE</button>
 <button class="mode-choice-btn" onclick="selectGameMode('2v2')">2v2 MODE</button>
@@ -236,7 +513,7 @@
 
 <!-- Room Creation/Join Screen -->
 <div id="room-screen">
-<h1 style="color: #fff; font-size: 3rem; margin-bottom: 30px;" id="room-title">1V1 MODE</h1>
+<h1 id="room-title">1V1 MODE</h1>
 <div style="display: flex; gap: 50px; flex-wrap: wrap; justify-content: center;">
 <div style="text-align: center;">
 <h2 style="color: var(--cyber-blue); margin-bottom: 20px;">HOST ROOM</h2>
@@ -298,13 +575,13 @@
 // ============ FIREBASE CONFIGURATION ============
 // REPLACE THIS WITH YOUR FIREBASE CONFIG
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-  databaseURL: "https://YOUR_PROJECT_ID.firebaseio.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID"
+ apiKey: "AIzaSyDxaM9pJz-teyRlh3FGWBqrlmNBoHUI8PI",
+  authDomain: "onlinesubsi.firebaseapp.com",
+  databaseURL: "https://onlinesubsi-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "onlinesubsi",
+  storageBucket: "onlinesubsi.firebasestorage.app",
+  messagingSenderId: "449026938160",
+  appId: "1:449026938160:web:7dc95b9a3c59e35deba4f5"
 };
 
 // Initialize Firebase
