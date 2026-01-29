@@ -3,189 +3,78 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Subsi ki Jang – Online Mode</title>
-
+<title>Subsi ki Jang - Online Mode</title>
 <link rel="stylesheet" href="game-styles.css">
+<link rel="stylesheet" href="online-styles.css">
 </head>
-
 <body>
 <div id="crt-overlay"></div>
 <div id="game-window">
-
 <button id="back-btn" onclick="goBack()">← BACK</button>
 
-<!-- MODE -->
-<div id="mode-selection" class="screen">
-  <h1>ONLINE MODE</h1>
-  <button onclick="selectGameMode('1v1')">1v1 MODE</button>
-  <button onclick="selectGameMode('1v2')">1v2 MODE</button>
-  <button onclick="selectGameMode('2v2')">2v2 MODE</button>
+<div id="mode-selection">
+<h1>ONLINE MODE</h1>
+<button class="mode-choice-btn" onclick="selectGameMode('1v1')">1v1 MODE</button>
+<button class="mode-choice-btn" onclick="selectGameMode('1v2')">1v2 MODE</button>
+<button class="mode-choice-btn" onclick="selectGameMode('2v2')">2v2 MODE</button>
 </div>
 
-<!-- ROOM -->
-<div id="room-screen" class="screen hidden">
-  <h1 id="room-title"></h1>
-  <button onclick="hostRoom()">HOST ROOM</button><br><br>
-  <input id="join-code-input" placeholder="ROOM CODE">
-  <button onclick="joinRoom()">JOIN</button>
-  <div id="room-code-display" class="hidden">
-    ROOM CODE: <span id="room-code"></span>
-  </div>
-  <div id="waiting-msg"></div>
+<div id="room-screen" style="display: none;">
+<h1 id="room-title">1V1 MODE</h1>
+<div style="display: flex; gap: 50px; flex-wrap: wrap; justify-content: center;">
+<div style="text-align: center;">
+<h2 style="color: var(--cyber-blue); margin-bottom: 20px;">HOST ROOM</h2>
+<button class="room-btn" onclick="hostRoom()">CREATE ROOM</button>
+<div id="room-code-display">ROOM: <span id="room-code"></span></div>
+</div>
+<div style="text-align: center;">
+<h2 style="color: var(--cyber-blue); margin-bottom: 20px;">JOIN ROOM</h2>
+<input type="text" class="room-input" id="join-code-input" placeholder="ENTER ROOM CODE" maxlength="6">
+<button class="room-btn" onclick="joinRoom()">JOIN</button>
+</div>
+</div>
+<div id="waiting-msg">WAITING FOR OPPONENTS...</div>
+<button class="room-btn" onclick="cancelRoom()" style="margin-top: 30px; border-color: #f00; color: #f00;">CANCEL</button>
 </div>
 
-<!-- SELECTION -->
-<div id="selection-screen" class="screen hidden">
-  <h1>ONLINE BATTLE</h1>
-  <div id="sel-hint">[ SELECT YOUR BEAST ]</div>
-  <div id="roster" class="roster-grid"></div>
+<div id="selection-screen" style="display: none;">
+<h1>ONLINE BATTLE</h1>
+<div id="sel-hint" style="color:#555; letter-spacing:4px; margin-bottom:10px;">[ SELECT YOUR UNIT ]</div>
+<div class="grid" id="roster"></div>
 </div>
 
+<div id="battle-screen" style="display: none;">
+<div id="ticker"></div>
+<div class="hud-top">
+<div id="player-huds" style="display: flex; flex-wrap: wrap; gap: 10px; width: 100%;"></div>
+</div>
+<div id="arena-bg">
+<div id="arena-sprites"></div>
+</div>
+<button id="exec-trigger" onclick="handleAction()">INITIATE STRIKE</button>
+<div id="control-panel">
+<div id="console">
+<div style="color:var(--cyber-blue); font-weight:900; border-bottom: 1px solid #333; margin-bottom:10px;">>> TACTICAL READOUT</div>
+<div>MODULE: <span id="c-title" class="data-val">---</span></div>
+<div>ACCURACY: <span id="c-acc" class="data-val">---</span></div>
+<div style="color:var(--term-red)">EST DAMAGE: <span id="c-dmg" class="data-val">---</span></div>
+<div id="c-desc" style="color:#666; font-size:0.7rem; margin-top: auto;">// AWAITING MODULE...</div>
+</div>
+<div id="move-grid">
+<button class="move-btn" id="cat-att" onclick="showSub('ATTACK')">ATTACK SET</button>
+<button class="move-btn" id="cat-itm" onclick="showSub('ITEMS')">ITEM POUCH</button>
+<button class="move-btn" id="b0" style="display:none;"></button>
+<button class="move-btn" id="b1" style="display:none;"></button>
+<button class="move-btn" id="b2" style="display:none;"></button>
+<button class="move-btn" id="b3" style="display:none;"></button>
+</div>
+</div>
+</div>
 </div>
 
-<!-- FIREBASE -->
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
-
 <script src="game-data.js"></script>
-
-<script>
-/* ========= FIREBASE ========= */
-firebase.initializeApp({
-  apiKey: "AIzaSyDxaM9pJz-teyRlh3FGWBqrlmNBoHUI8PI",
-  databaseURL: "https://onlinesubsi-default-rtdb.asia-southeast1.firebasedatabase.app"
-});
-const db = firebase.database();
-
-/* ========= STATE ========= */
-let gameMode, roomCode;
-let playerRole, myTeam;
-let roomRef;
-let selectionLocked = false;
-
-/* ========= NAV ========= */
-function show(id){
-  document.querySelectorAll('.screen').forEach(s=>s.classList.add('hidden'));
-  document.getElementById(id).classList.remove('hidden');
-}
-function goBack(){
-  if(roomRef) roomRef.remove();
-  location.href="index.html";
-}
-
-/* ========= MODE ========= */
-function selectGameMode(m){
-  gameMode=m;
-  show("room-screen");
-  document.getElementById("room-title").innerText=m.toUpperCase()+" MODE";
-}
-
-/* ========= ROOM ========= */
-function hostRoom(){
-  roomCode=Math.random().toString(36).substring(2,8).toUpperCase();
-  playerRole="p1"; myTeam="A";
-
-  roomRef=db.ref("rooms/"+roomCode);
-  roomRef.set({
-    mode:gameMode,
-    players:{ p1:{team:"A"} },
-    phase:"waiting"
-  });
-
-  document.getElementById("room-code").innerText=roomCode;
-  document.getElementById("room-code-display").classList.remove("hidden");
-
-  listenRoom();
-}
-
-function joinRoom(){
-  roomCode=document.getElementById("join-code-input").value.toUpperCase();
-  roomRef=db.ref("rooms/"+roomCode);
-
-  roomRef.once("value",snap=>{
-    if(!snap.exists()) return alert("ROOM NOT FOUND");
-
-    const players=snap.val().players||{};
-    const idx=Object.keys(players).length+1;
-    playerRole="p"+idx;
-    myTeam=idx%2===1?"A":"B";
-
-    roomRef.child("players/"+playerRole).set({team:myTeam});
-    listenRoom();
-  });
-}
-
-/* ========= ROOM LISTENER ========= */
-function listenRoom(){
-  roomRef.on("value",snap=>{
-    const data=snap.val();
-    if(!data) return;
-
-    const need =
-      data.mode==="1v1"?2:
-      data.mode==="1v2"?3:4;
-
-    if(data.phase==="waiting" && Object.keys(data.players).length===need){
-      roomRef.child("phase").set("selecting");
-      startSelection();
-    }
-
-    if(data.phase==="battle"){
-      location.href="battle.html?room="+roomCode+"&role="+playerRole;
-    }
-  });
-}
-
-/* ========= SELECTION ========= */
-function startSelection(){
-  if(selectionLocked) return;
-  selectionLocked=true;
-
-  show("selection-screen");
-  loadBeasts();
-}
-
-function loadBeasts(){
-  const r=document.getElementById("roster");
-  r.innerHTML="";
-  Object.keys(dbData).filter(b=>b!=="Vibhamon").forEach(b=>{
-    r.innerHTML+=`
-      <div class="card" onclick="pickBeast('${b}')">
-        ${b}
-      </div>`;
-  });
-}
-
-function pickBeast(b){
-  roomRef.child(`players/${playerRole}/beast`).set(b);
-  document.getElementById("sel-hint").innerText="[ SELECT YOUR TRAINER ]";
-  loadTrainers();
-}
-
-function loadTrainers(){
-  const r=document.getElementById("roster");
-  r.innerHTML="";
-  Object.keys(trainers).filter(t=>t!=="Lord Keshav").forEach(t=>{
-    r.innerHTML+=`
-      <div class="card" onclick="pickTrainer('${t}')">
-        ${t}
-      </div>`;
-  });
-}
-
-function pickTrainer(t){
-  roomRef.child(`players/${playerRole}/trainer`).set(t);
-  roomRef.child(`players/${playerRole}/ready`).set(true);
-  document.getElementById("sel-hint").innerText="[ WAITING FOR OTHERS ]";
-
-  roomRef.once("value",snap=>{
-    const p=snap.val().players;
-    if(Object.values(p).every(x=>x.ready)){
-      roomRef.child("phase").set("battle");
-    }
-  });
-}
-</script>
-
+<script src="online-game.js"></script>
 </body>
 </html>
