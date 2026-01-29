@@ -1,259 +1,216 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Subsi ki Jang – Online Mode</title>
-
-<!-- SHARED CSS (IMPORTANT) -->
-<link rel="stylesheet" href="game-styles.css">
-
-<style>
-/* === ONLINE MODE OVERRIDES ONLY === */
-
-#mode-selection,
-#room-screen,
-#selection-screen,
-#battle-screen {
-  position: absolute;
-  inset: 0;
-}
-
-#selection-screen {
-  display: none;
-  flex-direction: column;
-  align-items: center;
-  background: radial-gradient(circle at center, rgba(0,243,255,.15), #000 70%);
-  z-index: 50;
-}
-
-#selection-screen h1 {
-  margin-top: 40px;
-  letter-spacing: 6px;
-}
-
-#roster {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 16px;
-  max-width: 900px;
-  width: 100%;
-  padding: 20px;
-}
-
-.card {
-  cursor: pointer;
-  border: 2px solid var(--b-color);
-  background: #000;
-  padding: 12px;
-  text-align: center;
-  box-shadow: 0 0 15px var(--b-color);
-  transition: 0.2s;
-}
-.card:hover {
-  transform: scale(1.05);
-}
-
-.random-card {
-  border-style: dashed;
-}
-</style>
-</head>
-
-<body>
-<div id="crt-overlay"></div>
-<div id="game-window">
-
-<button id="back-btn" onclick="goBack()">← BACK</button>
-
-<!-- ========== MODE SELECTION ========== -->
-<div id="mode-selection">
-  <h1>ONLINE MODE</h1>
-  <button onclick="selectGameMode('1v1')">1v1 MODE</button>
-  <button onclick="selectGameMode('1v2')">1v2 MODE</button>
-  <button onclick="selectGameMode('2v2')">2v2 MODE</button>
-</div>
-
-<!-- ========== ROOM SCREEN ========== -->
-<div id="room-screen" style="display:none;">
-  <h1 id="room-title"></h1>
-
-  <button onclick="hostRoom()">HOST ROOM</button><br><br>
-
-  <input id="join-code-input" placeholder="ROOM CODE">
-  <button onclick="joinRoom()">JOIN</button>
-
-  <div id="room-code-display" style="display:none;">
-    ROOM CODE: <span id="room-code"></span>
-  </div>
-
-  <div id="waiting-msg"></div>
-</div>
-
-<!-- ========== SELECTION SCREEN ========== -->
-<div id="selection-screen">
-  <h1>ONLINE BATTLE</h1>
-  <div id="sel-hint">[ SELECT YOUR BEAST ]</div>
-  <div id="roster"></div>
-</div>
-
-<!-- ========== BATTLE SCREEN ========== -->
-<div id="battle-screen" style="display:none;">
-  <div id="ticker"></div>
-  <div id="battle-hud-container"></div>
-  <div id="arena-flex"></div>
-
-  <button id="exec-trigger" onclick="handleAction()">EXECUTE</button>
-
-  <div id="control-panel">
-    <button id="cat-att" onclick="showSub('ATTACK')">ATTACK</button>
-    <button id="cat-itm" onclick="showSub('ITEMS')">ITEMS</button>
-    <button id="b0"></button>
-    <button id="b1"></button>
-    <button id="b2"></button>
-    <button id="b3"></button>
-  </div>
-</div>
-
-</div>
-
-<!-- FIREBASE -->
-<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
-
-<!-- GAME DATA -->
-<script src="game-data.js"></script>
-
-<script>
-/* ================= FIREBASE ================= */
-firebase.initializeApp({
+// ================= FIREBASE =================
+const firebaseConfig = {
   apiKey: "AIzaSyDxaM9pJz-teyRlh3FGWBqrlmNBoHUI8PI",
-  databaseURL: "https://onlinesubsi-default-rtdb.asia-southeast1.firebasedatabase.app"
-});
-const dbRef = firebase.database();
+  authDomain: "onlinesubsi.firebaseapp.com",
+  databaseURL: "https://onlinesubsi-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "onlinesubsi",
+  storageBucket: "onlinesubsi.firebasestorage.app",
+  messagingSenderId: "449026938160",
+  appId: "1:449026938160:web:7dc95b9a3c59e35deba4f5"
+};
 
-/* ================= GLOBAL STATE ================= */
-let gameMode, roomCode, isHost=false;
-let playerRole, myTeam;
-let roomRef, gameStateRef;
-let players = {};
-let turn, turnOrder=[], currentTurnIndex=0;
-let mySelection={beast:null, trainer:null};
-let selectionStarted=false;
-let curM;
+firebase.initializeApp(firebaseConfig);
+const database = firebase.database();
 
-/* ================= NAV ================= */
-function goBack(){
+// ================= GAME STATE =================
+let gameMode, roomCode, roomRef, gameStateRef;
+let playerRole, myTeam, isHost = false;
+let players = {}, turn, turnOrder = [], currentTurnIndex = 0;
+let mySelection = { beast:null, trainer:null };
+let curM = null, gameStarted = false;
+let potionBlock = {}, dmgReduction = {};
+
+// ================= NAV =================
+window.goBack = () => {
   if(roomRef) roomRef.remove();
-  location.href="index.html";
+  location.href = "index.html";
+};
+
+window.selectGameMode = mode => {
+  gameMode = mode;
+  modeView(false);
+};
+
+function modeView(show) {
+  document.getElementById("mode-selection").style.display = show?"flex":"none";
+  document.getElementById("room-screen").style.display = show?"none":"flex";
+  document.getElementById("room-title").innerText = gameMode.toUpperCase()+" MODE";
 }
 
-/* ================= MODE ================= */
-function selectGameMode(m){
-  gameMode=m;
-  document.getElementById('mode-selection').style.display='none';
-  document.getElementById('room-screen').style.display='flex';
-  document.getElementById('room-title').innerText=m.toUpperCase()+" MODE";
+// ================= ROOM =================
+function genCode() {
+  return Math.random().toString(36).substring(2,8).toUpperCase();
 }
 
-/* ================= ROOM ================= */
-function hostRoom(){
-  roomCode=Math.random().toString(36).substring(2,8).toUpperCase();
-  isHost=true;
-  playerRole="p1";
-  myTeam="A";
+window.hostRoom = () => {
+  roomCode = genCode();
+  isHost = true;
+  playerRole = "p1";
+  myTeam = "A";
 
-  roomRef=dbRef.ref("rooms/"+roomCode);
+  roomRef = database.ref("rooms/"+roomCode);
   roomRef.set({
-    mode:gameMode,
-    players:{p1:{team:"A", ready:false}}
+    mode: gameMode,
+    players: {
+      p1:{connected:true,ready:false,beast:null,trainer:null,team:"A"}
+    }
   });
 
-  document.getElementById("room-code").innerText=roomCode;
+  document.getElementById("room-code").innerText = roomCode;
   document.getElementById("room-code-display").style.display="block";
-  listenPlayers();
-}
+  waitPlayers();
+};
 
-function joinRoom(){
-  roomCode=document.getElementById("join-code-input").value.toUpperCase();
-  roomRef=dbRef.ref("rooms/"+roomCode);
+window.joinRoom = () => {
+  const code = document.getElementById("join-code-input").value.trim().toUpperCase();
+  if(!code) return alert("ENTER CODE");
 
-  roomRef.once("value",snap=>{
+  roomCode = code;
+  roomRef = database.ref("rooms/"+roomCode);
+
+  roomRef.once("value", snap=>{
     if(!snap.exists()) return alert("ROOM NOT FOUND");
-    const count=Object.keys(snap.val().players||{}).length;
-    playerRole="p"+(count+1);
-    myTeam = (count%2===0)?"A":"B";
-    roomRef.child("players/"+playerRole).set({team:myTeam, ready:false});
-    listenPlayers();
+    const room = snap.val();
+    const cnt = Object.keys(room.players).length;
+    playerRole = "p"+(cnt+1);
+    myTeam = cnt%2===0?"B":"A";
+    gameMode = room.mode;
+
+    roomRef.child("players/"+playerRole).set({
+      connected:true,ready:false,beast:null,trainer:null,team:myTeam
+    });
+    waitPlayers();
+  });
+};
+
+function waitPlayers() {
+  document.getElementById("waiting-msg").style.display="block";
+  roomRef.child("players").on("value", snap=>{
+    const p = snap.val();
+    const need = gameMode==="1v1"?2:gameMode==="1v2"?3:4;
+    document.getElementById("waiting-msg").innerText =
+      `WAITING (${Object.keys(p).length}/${need})`;
+    if(Object.keys(p).length>=need) setTimeout(startSelection,300);
   });
 }
 
-function listenPlayers(){
-  roomRef.child("players").off();
-  roomRef.child("players").on("value",snap=>{
-    const p=snap.val();
-    const need=gameMode==="1v1"?2:gameMode==="1v2"?3:4;
-    if(Object.keys(p).length>=need) startSelection();
-  });
-}
-
-/* ================= SELECTION ================= */
-function startSelection(){
-  if(selectionStarted) return;
-  selectionStarted=true;
-
+// ================= SELECTION =================
+function startSelection() {
   document.getElementById("room-screen").style.display="none";
-  const s=document.getElementById("selection-screen");
-  s.style.display="flex";
-  s.style.opacity="0";
-  s.offsetHeight;
-  s.style.transition="opacity .3s";
-  s.style.opacity="1";
-
-  setTimeout(loadBeasts,50);
+  document.getElementById("selection-screen").style.display="flex";
+  loadBeasts();
+  roomRef.child("players").on("value", snap=>checkReady(snap.val()));
 }
 
-function loadBeasts(){
+function loadBeasts() {
+  if(!window.db) return;
   const r=document.getElementById("roster");
   r.innerHTML="";
-  Object.keys(db).filter(n=>n!=="Vibhamon").forEach(n=>{
+  Object.keys(db).filter(b=>b!=="Vibhamon").forEach(b=>{
     r.innerHTML+=`
-      <div class="card" style="--b-color:${db[n].color}"
-        onclick="pickBeast('${n}')">
-        <div>${n}</div>
+      <div class="card" onclick="pickBeast('${b}')"
+      style="--b-color:${db[b].color}">
+      <div class="beast-name">${b}</div>
+      <div class="beast-type">${db[b].type}</div>
       </div>`;
   });
 }
 
-function pickBeast(n){
-  if(mySelection.beast) return;
-  mySelection.beast=n;
-  roomRef.child("players/"+playerRole+"/beast").set(n);
-  document.getElementById("sel-hint").innerText="[ SELECT YOUR TRAINER ]";
-  setTimeout(loadTrainers,100);
-}
+window.pickBeast = b => {
+  mySelection.beast=b;
+  roomRef.child(`players/${playerRole}/beast`).set(b);
+  loadTrainers();
+};
 
-function loadTrainers(){
+function loadTrainers() {
   const r=document.getElementById("roster");
   r.innerHTML="";
-  Object.keys(trainers).filter(t=>t!=="Lord Keshav").forEach(n=>{
+  Object.keys(trainers).filter(t=>t!=="Lord Keshav").forEach(t=>{
     r.innerHTML+=`
-      <div class="card" style="--b-color:${trainers[n].c}"
-        onclick="pickTrainer('${n}')">
-        <div>${n}</div>
-        <small>${trainers[n].name}</small>
+      <div class="card" onclick="pickTrainer('${t}')"
+      style="--b-color:${trainers[t].c}">
+      <div class="beast-name">${t}</div>
+      <div class="beast-type">${trainers[t].name}</div>
       </div>`;
   });
 }
 
-function pickTrainer(n){
-  if(mySelection.trainer) return;
-  mySelection.trainer=n;
-  roomRef.child("players/"+playerRole+"/trainer").set(n);
-  roomRef.child("players/"+playerRole+"/ready").set(true);
-  document.getElementById("sel-hint").innerText="[ WAITING FOR OTHERS ]";
-}
-</script>
+window.pickTrainer = t => {
+  mySelection.trainer=t;
+  roomRef.child(`players/${playerRole}`).update({
+    trainer:t,ready:true
+  });
+};
 
-</body>
-</html>
+function checkReady(p) {
+  if(!p || gameStarted) return;
+  if(Object.values(p).every(x=>x.ready)) {
+    gameStarted=true;
+    initBattle(p);
+  }
+}
+
+// ================= BATTLE =================
+function initBattle(pdata) {
+  document.getElementById("selection-screen").style.display="none";
+  document.getElementById("battle-screen").style.display="flex";
+
+  players={};
+  Object.keys(pdata).forEach(k=>{
+    const d=pdata[k];
+    const base=db[d.beast];
+    players[k]={
+      ...base,n:d.beast,cur:base.hp,
+      role:k,team:d.team,trainer:d.trainer,
+      trId:trainers[d.trainer].id,
+      trColor:trainers[d.trainer].c,
+      stun:0,bleed:0,weak:0,shield:0,
+      buff:0,accMod:0,evasion:0,
+      used:[],items:{HP:1,ANTI:1,BUFF:1,BKUP:1},
+      hasDealtDmg:false
+    };
+    potionBlock[k]=0; dmgReduction[k]=0;
+  });
+
+  turnOrder=Object.keys(players);
+  turn=turnOrder[0];
+
+  if(isHost) {
+    gameStateRef=roomRef.child("gameState");
+    const s={turn,potionBlock,dmgReduction};
+    turnOrder.forEach(k=>s[k]=players[k]);
+    gameStateRef.set(s);
+  } else gameStateRef=roomRef.child("gameState");
+
+  gameStateRef.on("value",snap=>{
+    if(!snap.exists()) return;
+    const s=snap.val();
+    turn=s.turn;
+    potionBlock=s.potionBlock||{};
+    dmgReduction=s.dmgReduction||{};
+    Object.keys(players).forEach(k=>players[k]={...players[k],...s[k]});
+    updateUI();
+    showMain();
+  });
+}
+
+// ================= UI =================
+function updateUI() {
+  Object.values(players).forEach(p=>{
+    document.getElementById(`bar-${p.role}`).style.width =
+      (p.cur/p.hp*100)+"%";
+    document.getElementById(`hp-${p.role}`).innerText =
+      `CORE: ${Math.max(0,p.cur)}/${p.hp}`;
+  });
+}
+
+function showMain() {
+  const myTurn = turn===playerRole;
+  document.getElementById("cat-att").style.display=myTurn?"block":"none";
+  document.getElementById("cat-itm").style.display=myTurn?"block":"none";
+}
+
+// ================= CLEANUP =================
+window.addEventListener("beforeunload",()=>{
+  if(roomRef) roomRef.child(`players/${playerRole}/connected`).set(false);
+});
