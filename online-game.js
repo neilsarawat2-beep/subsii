@@ -275,11 +275,15 @@ function syncGameState(state) {
   if(!state) return;
   Object.keys(players).forEach(key => { if(state[key]) players[key] = deserializePlayer(state[key], players[key]); });
   turn = state.turn;
+  turnOrder = state.turnOrder;
   potionBlock = state.potionBlock || {};
   dmgReduction = state.dmgReduction || {};
   updateUI();
+  
+  // Check if there's a pending action from another player
   if(state.currentAction && state.currentAction.processed === false && state.currentAction.player !== playerRole) {
-    processOpponentAction(state.currentAction);
+    // Mark as processed to prevent re-execution
+    gameStateRef.child('currentAction/processed').set(true);
   }
 }
 
@@ -304,7 +308,12 @@ function updateUI() {
     const potBlock = document.getElementById(`potion-block-${p.role}`);
     if(potBlock) potBlock.innerText = (potionBlock[p.role] || 0) > 0 ? `POT BLOCK(${potionBlock[p.role]})` : "";
     const items = document.getElementById(`items-${p.role}`);
-    if(items) items.innerHTML = `<span style="background:#000; border:1px solid var(--cyber-blue); padding:1px 4px; color:var(--cyber-blue);">HP:${p.items.HP}</span><span style="background:#000; border:1px solid var(--cyber-blue); padding:1px 4px; color:var(--cyber-blue);">ANTI:${p.items.ANTI}</span><span style="background:#000; border:1px solid var(--cyber-blue); padding:1px 4px; color:var(--cyber-blue);">BUFF:${p.items.BUFF}</span><span style="background:#000; border:1px solid var(--cyber-blue); padding:1px 4px; color:var(--cyber-blue);">BKUP:${p.items.BKUP}</span>`;
+    if(items) items.innerHTML = `
+      <span style="background:#000; border:1px solid var(--cyber-blue); padding:1px 4px; color:var(--cyber-blue);">HP:${p.items.HP}</span>
+      <span style="background:#000; border:1px solid var(--cyber-blue); padding:1px 4px; color:var(--cyber-blue);">ANTI:${p.items.ANTI}</span>
+      <span style="background:#000; border:1px solid var(--cyber-blue); padding:1px 4px; color:var(--cyber-blue);">BUFF:${p.items.BUFF}</span>
+      <span style="background:#000; border:1px solid var(--cyber-blue); padding:1px 4px; color:var(--cyber-blue);">BKUP:${p.items.BKUP}</span>
+    `;
     const hud = document.getElementById(`hud-${p.role}`);
     if(hud) hud.classList.toggle('active-player', p.role === turn);
     const sprite = document.getElementById(`sprite-${p.role}`);
@@ -315,82 +324,115 @@ function updateUI() {
 function showMain() {
   document.getElementById('ticker').innerText = "";
   const isMyTurn = turn === playerRole;
+  
+  // Hide cat buttons first
+  document.getElementById('cat-att').style.display = 'none';
+  document.getElementById('cat-itm').style.display = 'none';
+  
+  // Hide all move buttons
+  for(let i=0; i<4; i++) { 
+    const btn = document.getElementById('b'+i);
+    btn.style.display = 'none'; 
+    btn.classList.remove('selected'); 
+  }
+  
+  document.getElementById('exec-trigger').style.display = 'none';
+  
   if(isMyTurn) {
+    // Show category buttons for current player
     document.getElementById('cat-att').style.display = 'block';
     document.getElementById('cat-itm').style.display = 'block';
   } else {
-    document.getElementById('cat-att').style.display = 'none';
-    document.getElementById('cat-itm').style.display = 'none';
-    document.getElementById('ticker').innerText = `${players[turn].n.toUpperCase()}'S TURN...`;
+    // Show opponent's turn message
+    if(players[turn]) {
+      document.getElementById('ticker').innerText = `${players[turn].n.toUpperCase()}'S TURN...`;
+    }
   }
-  for(let i=0;i<4;i++) { 
-    document.getElementById('b'+i).style.display='none'; 
-    document.getElementById('b'+i).classList.remove('selected'); 
-  }
-  document.getElementById('exec-trigger').style.display='none';
 }
 
 function showSub(m) {
-  document.getElementById('cat-att').style.display='none';
-  document.getElementById('cat-itm').style.display='none';
+  // Hide category buttons
+  document.getElementById('cat-att').style.display = 'none';
+  document.getElementById('cat-itm').style.display = 'none';
+  
   const a = players[turn];
   const opponents = Object.values(players).filter(p => p.team !== a.team && p.cur > 0);
   
-  if(m==='ATTACK') {
-    a.moves.forEach((mv,i)=>{
-      let b=document.getElementById('b'+i);
-      b.style.display='block';
-      b.innerText=mv.n;
-      b.disabled = (a.used.includes(mv.n) || (mv.t === "SHIELD" && a.shieldLock));
-      b.onclick=()=>prep(mv,i,false);
+  if(m === 'ATTACK') {
+    // Show all 4 move buttons
+    a.moves.forEach((mv, i) => {
+      const btn = document.getElementById('b' + i);
+      btn.style.display = 'block';
+      btn.innerText = mv.n;
+      btn.disabled = (a.used.includes(mv.n) || (mv.t === "SHIELD" && a.shieldLock));
+      btn.onclick = () => prep(mv, i, false);
     });
   } else {
-    const itms=[
-      {n:"HP POTION",t:"HP",v:a.items.HP,d:"+7 HP"},
-      {n:"ANTI",t:"ANTI",v:a.items.ANTI,d:"Clear status"},
-      {n:"BUFF",t:"BUFF",v:a.items.BUFF,d:"+3 DMG & +10% ACC"},
-      {n:"BACKUP",t:"BKUP",v:a.items.BKUP,d:"Revive Life"}
+    // Show all 4 item buttons
+    const itms = [
+      {n:"HP POTION", t:"HP", v:a.items.HP, d:"+7 HP"},
+      {n:"ANTI", t:"ANTI", v:a.items.ANTI, d:"Clear status"},
+      {n:"BUFF", t:"BUFF", v:a.items.BUFF, d:"+3 DMG & +10% ACC"},
+      {n:"BACKUP", t:"BKUP", v:a.items.BKUP, d:"Revive Life"}
     ];
     const oppHasNaysha = opponents.some(o => o.trId === "NAYSHA" || o.trId === "KESHAV");
     const currentPotBlock = potionBlock[turn] || 0;
-    itms.forEach((it,i)=>{
-      let b=document.getElementById('b'+i);
-      b.style.display='block';
-      b.innerText=`${it.n}(${it.v})`;
-      b.disabled = (it.v<=0 || (oppHasNaysha && (it.t==="HP"||it.t==="ANTI")) || (currentPotBlock>0 && (it.t==="HP"||it.t==="ANTI")));
-      b.onclick=()=>prep(it,i,true);
+    
+    itms.forEach((it, i) => {
+      const btn = document.getElementById('b' + i);
+      btn.style.display = 'block';
+      btn.innerText = `${it.n}(${it.v})`;
+      btn.disabled = (it.v <= 0 || (oppHasNaysha && (it.t === "HP" || it.t === "ANTI")) || (currentPotBlock > 0 && (it.t === "HP" || it.t === "ANTI")));
+      btn.onclick = () => prep(it, i, true);
     });
   }
 }
 
-function prep(m,i,isItm) {
+function prep(m, i, isItm) {
   const a = players[turn];
   const opponents = Object.values(players).filter(p => p.team !== a.team && p.cur > 0);
   const o = opponents[0];
   curM = {...m, isItem:isItm};
-  for(let j=0;j<4;j++) document.getElementById('b'+j).classList.remove('selected');
+  
+  // Remove selected class from all buttons
+  for(let j=0; j<4; j++) {
+    document.getElementById('b'+j).classList.remove('selected');
+  }
+  
+  // Add selected class to clicked button
   if(i !== -1) document.getElementById('b'+i).classList.add('selected');
-  document.getElementById('c-title').innerText=m.n;
+  
+  // Update console
+  document.getElementById('c-title').innerText = m.n;
   let acc = m.p || 100;
   let mods = a.accMod;
   const isSp = (m.t === "DMG" || m.t === "RAND_DMG" || m.t === "STUN" || m.t === "SILENCE" || m.t === "PERCENT" || m.t === "SPEECH_STUN");
   if(o && !isItm && (o.trId === "UDAY" || o.trId === "KESHAV") && isSp && m.t !== "WIS" && m.t !== "SHIELD") mods -= 15;
   if(!isItm && (a.trId === "CHAHAK" || a.trId === "KESHAV") && isSp) mods += 10;
-  document.getElementById('c-acc').innerText=(isItm ? 100 : Math.min(100, acc + mods)) + "%";
+  document.getElementById('c-acc').innerText = (isItm ? 100 : Math.min(100, acc + mods)) + "%";
   let d = m.val || "EFF";
   if(m.t === "RISK") d = 10;
   if(m.t === "PERCENT") d = "50% HP";
-  if((a.trId === "CHAHAK" || a.trId === "KESHAV") && isSp && !isNaN(d)) d = parseInt(d)+2;
-  document.getElementById('c-dmg').innerText=d;
-  document.getElementById('c-desc').innerText=`// ${m.d||"Active"}`;
-  document.getElementById('exec-trigger').style.display='block';
+  if((a.trId === "CHAHAK" || a.trId === "KESHAV") && isSp && !isNaN(d)) d = parseInt(d) + 2;
+  document.getElementById('c-dmg').innerText = d;
+  document.getElementById('c-desc').innerText = `// ${m.d || "Active"}`;
+  document.getElementById('exec-trigger').style.display = 'block';
 }
 
 // ============ ACTION HANDLING ============
 function handleAction() {
   if(turn !== playerRole) return;
-  document.getElementById('exec-trigger').style.display='none';
-  gameStateRef.child('currentAction').set({ player: playerRole, move: curM, processed: false, timestamp: firebase.database.ServerValue.TIMESTAMP });
+  document.getElementById('exec-trigger').style.display = 'none';
+  
+  // Set action in Firebase
+  gameStateRef.child('currentAction').set({ 
+    player: playerRole, 
+    move: curM, 
+    processed: false, 
+    timestamp: firebase.database.ServerValue.TIMESTAMP 
+  });
+  
+  // Execute action immediately for this player
   executeAction();
 }
 
@@ -404,11 +446,11 @@ function executeAction() {
   let msg = "";
   
   if(curM.isItem) {
-    if(curM.t==='HP') att.cur=Math.min(att.hp, att.cur+7);
-    if(curM.t==='ANTI') { att.stun=0; att.bleed=0; att.weak=0; }
-    if(curM.t==='BUFF') { att.buff=3; att.accMod=10; }
+    if(curM.t === 'HP') att.cur = Math.min(att.hp, att.cur + 7);
+    if(curM.t === 'ANTI') { att.stun = 0; att.bleed = 0; att.weak = 0; }
+    if(curM.t === 'BUFF') { att.buff = 3; att.accMod = 10; }
     att.items[curM.t]--;
-    t.innerHTML="<div class='crit-text' style='color:#0f0; border-color:#0f0'>[ FIXED ]</div>";
+    t.innerHTML = "<div class='crit-text' style='color:#0f0; border-color:#0f0'>[ FIXED ]</div>";
   } else {
     let hit = (curM.p || 100) + att.accMod;
     const isSp = (curM.t === "DMG" || curM.t === "RAND_DMG" || curM.t === "STUN" || curM.t === "SILENCE" || curM.t === "PERCENT" || curM.t === "SPEECH_STUN");
@@ -418,31 +460,31 @@ function executeAction() {
     let dodged = false;
     if((def.trId === "ADVIK" || def.trId === "KESHAV") && (isSp || att.buff > 0)) if(Math.random() < 0.2) dodged = true;
     
-    if(Math.random()*100 > hit || dodged) {
+    if(Math.random() * 100 > hit || dodged) {
       t.innerHTML = dodged ? "<div class='crit-text' style='color:#ff4500;'>[ DODGED ]</div>" : "<div class='crit-text' style='color:#888; border-color:#888'>[ MISSED ]</div>";
       att.accMod = 0;
     } else {
-      let d = (curM.val||0);
-      if(curM.t==="RAND_DMG") d = Math.floor(Math.random()*(curM.max-curM.min+1))+curM.min;
-      if(curM.t==="RISK") { att.cur = Math.max(1, att.cur - 8); d = 10; }
-      if(curM.t==="WIS") d = (def.cur > att.cur) ? Math.floor(def.cur / 2) : 0;
-      if(curM.t==="DS") d = (def.cur < (def.hp * 0.3)) ? def.cur : 2;
-      if(curM.t==="PERCENT") d = Math.floor(att.cur * 0.5);
-      if(curM.t==="SPEECH_STUN") { def.stun = 3; d = 0; }
-      if(curM.t==="WARRANT") {
+      let d = (curM.val || 0);
+      if(curM.t === "RAND_DMG") d = Math.floor(Math.random() * (curM.max - curM.min + 1)) + curM.min;
+      if(curM.t === "RISK") { att.cur = Math.max(1, att.cur - 8); d = 10; }
+      if(curM.t === "WIS") d = (def.cur > att.cur) ? Math.floor(def.cur / 2) : 0;
+      if(curM.t === "DS") d = (def.cur < (def.hp * 0.3)) ? def.cur : 2;
+      if(curM.t === "PERCENT") d = Math.floor(att.cur * 0.5);
+      if(curM.t === "SPEECH_STUN") { def.stun = 3; d = 0; }
+      if(curM.t === "WARRANT") {
         if(def.cur <= 20) { potionBlock[def.role] = 5; dmgReduction[def.role] = 2; msg = "[ WARRANT ACTIVATED ]"; d = 0; }
         else { d = 0; msg = "[ WARRANT FAILED ]"; }
       }
-      if(curM.t==="HEAL") { att.cur = Math.min(att.hp, att.cur+3); d=0; msg="[ HEALED ]"; }
-      if(curM.t==="SWAP") { let tmp = att.cur; att.cur = def.cur; def.cur = tmp; d = 0; msg="[ SWAPPED ]"; }
-      if(curM.t==="BLEED") def.bleed = 3;
-      if(curM.t==="BLEED_RAND") { def.bleed = 3; d = Math.floor(Math.random() * 2) + 1; }
-      if(curM.t==="WEAK") def.weak = 3;
-      if(curM.t==="STUN") def.stun = (curM.n === "Bald Shine" || curM.n === "Pause" || curM.n === "Totalitarian" || curM.n === "Out Syllabus" || curM.n === "Go out") ? 2 : 1;
-      if(curM.t==="SILENCE") def.stun = 1;
-      if(curM.t==="EVA") { att.evasion = 1; msg="[ EVASIVE ]"; }
+      if(curM.t === "HEAL") { att.cur = Math.min(att.hp, att.cur + 3); d = 0; msg = "[ HEALED ]"; }
+      if(curM.t === "SWAP") { let tmp = att.cur; att.cur = def.cur; def.cur = tmp; d = 0; msg = "[ SWAPPED ]"; }
+      if(curM.t === "BLEED") def.bleed = 3;
+      if(curM.t === "BLEED_RAND") { def.bleed = 3; d = Math.floor(Math.random() * 2) + 1; }
+      if(curM.t === "WEAK") def.weak = 3;
+      if(curM.t === "STUN") def.stun = (curM.n === "Bald Shine" || curM.n === "Pause" || curM.n === "Totalitarian" || curM.n === "Out Syllabus" || curM.n === "Go out") ? 2 : 1;
+      if(curM.t === "SILENCE") def.stun = 1;
+      if(curM.t === "EVA") { att.evasion = 1; msg = "[ EVASIVE ]"; }
       
-      if(att.weak > 0 && d > 0) d = Math.floor(d/2);
+      if(att.weak > 0 && d > 0) d = Math.floor(d / 2);
       const currentDmgRed = dmgReduction[turn] || 0;
       if(currentDmgRed > 0 && d > 0) d = Math.max(0, d - currentDmgRed);
       if((att.trId === "CHAHAK" || att.trId === "KESHAV") && isSp && d > 0) d += 2;
@@ -456,12 +498,12 @@ function executeAction() {
       if(att.buff > 0 && d > 0) { d += 3; if(!dodged) att.buff = 0; }
       att.accMod = 0;
       
-      if(curM.t==="WRATH") { def.cur=1; d=0; msg="[ WRATH ]"; }
-      if(curM.t==="LEECH") att.cur = Math.min(att.hp, att.cur + d);
-      if(curM.t==="SHIELD" && !att.shieldLock) { att.shield = 3; msg="[ SHIELD UP ]"; }
+      if(curM.t === "WRATH") { def.cur = 1; d = 0; msg = "[ WRATH ]"; }
+      if(curM.t === "LEECH") att.cur = Math.min(att.hp, att.cur + d);
+      if(curM.t === "SHIELD" && !att.shieldLock) { att.shield = 3; msg = "[ SHIELD UP ]"; }
       
-      def.cur=Math.max(0, def.cur-d);
-      if(d>0 && sDef) { sDef.classList.add('shake'); att.hasDealtDmg = true; setTimeout(() => sDef.classList.remove('shake'), 300); }
+      def.cur = Math.max(0, def.cur - d);
+      if(d > 0 && sDef) { sDef.classList.add('shake'); att.hasDealtDmg = true; setTimeout(() => sDef.classList.remove('shake'), 300); }
       
       if((def.trId === "ADYA" || def.trId === "KESHAV") && d > 0) { att.cur = Math.max(0, att.cur - 1); msg = msg ? msg + " + [RECOIL]" : "[ RECOIL ]"; }
       
@@ -472,15 +514,13 @@ function executeAction() {
   }
   
   updateUI();
+  
+  // Update Firebase with new state
   const stateUpdate = { 'currentAction/processed': true, potionBlock, dmgReduction };
   Object.keys(players).forEach(key => stateUpdate[key] = serializePlayer(players[key]));
   gameStateRef.update(stateUpdate);
+  
   setTimeout(checkDeath, 1000);
-}
-
-function processOpponentAction(action) {
-  if(action.player === playerRole) return;
-  gameStateRef.child('currentAction/processed').set(true);
 }
 
 function checkDeath() {
@@ -511,7 +551,7 @@ function checkDeath() {
 
 function endTurn() {
   const c = players[turn];
-  if(c.bleed > 0 && c.cur > 0) { c.cur = Math.max(0, c.cur-1); c.bleed--; }
+  if(c.bleed > 0 && c.cur > 0) { c.cur = Math.max(0, c.cur - 1); c.bleed--; }
   if((c.trId === "NOEL" || c.trId === "KESHAV") && c.hasDealtDmg) {
     Object.values(players).filter(p => p.team !== c.team).forEach(o => o.cur = Math.max(0, o.cur - 2));
   }
@@ -525,10 +565,15 @@ function endTurn() {
   if(c.weak > 0) c.weak--;
   c.hasDealtDmg = false;
   
+  // Find next alive player
   let nextIndex = (currentTurnIndex + 1) % turnOrder.length;
   let attempts = 0;
-  while(players[turnOrder[nextIndex]].cur <= 0 && attempts < turnOrder.length) { nextIndex = (nextIndex + 1) % turnOrder.length; attempts++; }
+  while(players[turnOrder[nextIndex]].cur <= 0 && attempts < turnOrder.length) { 
+    nextIndex = (nextIndex + 1) % turnOrder.length; 
+    attempts++; 
+  }
   if(attempts >= turnOrder.length) { checkDeath(); return; }
+  
   currentTurnIndex = nextIndex;
   turn = turnOrder[currentTurnIndex];
   const n = players[turn];
@@ -536,13 +581,13 @@ function endTurn() {
   if(n.stun > 0) {
     n.stun--;
     updateUI();
-    document.getElementById('ticker').innerHTML=`<div class='crit-text' style='color:#f00'>${n.n.toUpperCase()} [ STUNNED ]</div>`;
-    const stateUpdate = { turn, potionBlock, dmgReduction };
+    document.getElementById('ticker').innerHTML = `<div class='crit-text' style='color:#f00'>${n.n.toUpperCase()} [ STUNNED ]</div>`;
+    const stateUpdate = { turn, turnOrder, potionBlock, dmgReduction };
     Object.keys(players).forEach(key => stateUpdate[key] = serializePlayer(players[key]));
     gameStateRef.update(stateUpdate);
     setTimeout(() => endTurn(), 1000);
   } else {
-    const stateUpdate = { turn, potionBlock, dmgReduction };
+    const stateUpdate = { turn, turnOrder, potionBlock, dmgReduction };
     Object.keys(players).forEach(key => stateUpdate[key] = serializePlayer(players[key]));
     gameStateRef.update(stateUpdate);
     showMain();
