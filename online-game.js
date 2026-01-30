@@ -263,28 +263,34 @@ function stealItem(thief, victim) {
 
 function serializePlayer(p) {
   if(!p) return null;
-  return { n: p.n, hp: p.hp, cur: p.cur, stun: p.stun, bleed: p.bleed, weak: p.weak, shield: p.shield, shieldLock: p.shieldLock, buff: p.buff, accMod: p.accMod, evasion: p.evasion, used: p.used, lastMoveName: p.lastMoveName, revived: p.revived, hasDealtDmg: p.hasDealtDmg, items: p.items, role: p.role, team: p.team };
+  return { 
+    n: p.n, hp: p.hp, cur: p.cur, stun: p.stun, bleed: p.bleed, weak: p.weak, 
+    shield: p.shield, shieldLock: p.shieldLock, buff: p.buff, accMod: p.accMod, 
+    evasion: p.evasion, used: p.used, lastMoveName: p.lastMoveName, revived: p.revived, 
+    hasDealtDmg: p.hasDealtDmg, items: p.items, role: p.role, team: p.team 
+  };
 }
 
 function deserializePlayer(data, original) {
   if(!data || !original) return original;
-  return { ...original, cur: data.cur, stun: data.stun, bleed: data.bleed, weak: data.weak, shield: data.shield, shieldLock: data.shieldLock, buff: data.buff, accMod: data.accMod, evasion: data.evasion, used: data.used, lastMoveName: data.lastMoveName, revived: data.revived, hasDealtDmg: data.hasDealtDmg, items: data.items };
+  return { 
+    ...original, cur: data.cur, stun: data.stun, bleed: data.bleed, weak: data.weak, 
+    shield: data.shield, shieldLock: data.shieldLock, buff: data.buff, accMod: data.accMod, 
+    evasion: data.evasion, used: data.used, lastMoveName: data.lastMoveName, revived: data.revived, 
+    hasDealtDmg: data.hasDealtDmg, items: data.items 
+  };
 }
 
 function syncGameState(state) {
   if(!state) return;
-  Object.keys(players).forEach(key => { if(state[key]) players[key] = deserializePlayer(state[key], players[key]); });
+  Object.keys(players).forEach(key => { 
+    if(state[key]) players[key] = deserializePlayer(state[key], players[key]); 
+  });
   turn = state.turn;
   turnOrder = state.turnOrder;
   potionBlock = state.potionBlock || {};
   dmgReduction = state.dmgReduction || {};
   updateUI();
-  
-  // Check if there's a pending action from another player
-  if(state.currentAction && state.currentAction.processed === false && state.currentAction.player !== playerRole) {
-    // Mark as processed to prevent re-execution
-    gameStateRef.child('currentAction/processed').set(true);
-  }
 }
 
 // ============ UI UPDATE ============
@@ -292,10 +298,13 @@ function updateUI() {
   Object.values(players).forEach(p => {
     const bar = document.getElementById(`bar-${p.role}`);
     if(bar) bar.style.width = (Math.max(0, p.cur) / p.hp * 100) + "%";
+    
     const hpText = document.getElementById(`hp-${p.role}`);
     if(hpText) hpText.innerText = `CORE: ${Math.max(0, Math.floor(p.cur))}/${p.hp}`;
+    
     const shield = document.getElementById(`shield-${p.role}`);
     if(shield) shield.innerText = p.shield > 0 ? `SH:${p.shield}` : (p.shieldLock ? "[LOCK]" : "");
+    
     const status = document.getElementById(`status-${p.role}`);
     if(status) {
       let st = [];
@@ -305,8 +314,10 @@ function updateUI() {
       if(p.evasion > 0) st.push("EVA");
       status.innerText = st.join(" | ");
     }
+    
     const potBlock = document.getElementById(`potion-block-${p.role}`);
     if(potBlock) potBlock.innerText = (potionBlock[p.role] || 0) > 0 ? `POT BLOCK(${potionBlock[p.role]})` : "";
+    
     const items = document.getElementById(`items-${p.role}`);
     if(items) items.innerHTML = `
       <span style="background:#000; border:1px solid var(--cyber-blue); padding:1px 4px; color:var(--cyber-blue);">HP:${p.items.HP}</span>
@@ -314,8 +325,10 @@ function updateUI() {
       <span style="background:#000; border:1px solid var(--cyber-blue); padding:1px 4px; color:var(--cyber-blue);">BUFF:${p.items.BUFF}</span>
       <span style="background:#000; border:1px solid var(--cyber-blue); padding:1px 4px; color:var(--cyber-blue);">BKUP:${p.items.BKUP}</span>
     `;
+    
     const hud = document.getElementById(`hud-${p.role}`);
     if(hud) hud.classList.toggle('active-player', p.role === turn);
+    
     const sprite = document.getElementById(`sprite-${p.role}`);
     if(sprite) sprite.classList.toggle('active-sprite', p.role === turn);
   });
@@ -325,13 +338,15 @@ function showMain() {
   document.getElementById('ticker').innerText = "";
   const isMyTurn = turn === playerRole;
   
-  // Hide cat buttons first
-  document.getElementById('cat-att').style.display = 'none';
-  document.getElementById('cat-itm').style.display = 'none';
+  // Hide category buttons
+  const catAtt = document.getElementById('cat-att');
+  const catItm = document.getElementById('cat-itm');
+  catAtt.style.display = 'none';
+  catItm.style.display = 'none';
   
-  // Hide all move buttons
-  for(let i=0; i<4; i++) { 
-    const btn = document.getElementById('b'+i);
+  // Hide all 4 move buttons
+  for(let i = 0; i < 4; i++) { 
+    const btn = document.getElementById('b' + i);
     btn.style.display = 'none'; 
     btn.classList.remove('selected'); 
   }
@@ -339,11 +354,11 @@ function showMain() {
   document.getElementById('exec-trigger').style.display = 'none';
   
   if(isMyTurn) {
-    // Show category buttons for current player
-    document.getElementById('cat-att').style.display = 'block';
-    document.getElementById('cat-itm').style.display = 'block';
+    // Show category buttons for my turn
+    catAtt.style.display = 'block';
+    catItm.style.display = 'block';
   } else {
-    // Show opponent's turn message
+    // Show opponent's turn
     if(players[turn]) {
       document.getElementById('ticker').innerText = `${players[turn].n.toUpperCase()}'S TURN...`;
     }
@@ -359,16 +374,17 @@ function showSub(m) {
   const opponents = Object.values(players).filter(p => p.team !== a.team && p.cur > 0);
   
   if(m === 'ATTACK') {
-    // Show all 4 move buttons
-    a.moves.forEach((mv, i) => {
+    // Show ALL 4 move buttons
+    for(let i = 0; i < 4; i++) {
+      const mv = a.moves[i];
       const btn = document.getElementById('b' + i);
       btn.style.display = 'block';
       btn.innerText = mv.n;
       btn.disabled = (a.used.includes(mv.n) || (mv.t === "SHIELD" && a.shieldLock));
       btn.onclick = () => prep(mv, i, false);
-    });
+    }
   } else {
-    // Show all 4 item buttons
+    // Show ALL 4 item buttons
     const itms = [
       {n:"HP POTION", t:"HP", v:a.items.HP, d:"+7 HP"},
       {n:"ANTI", t:"ANTI", v:a.items.ANTI, d:"Clear status"},
@@ -378,13 +394,14 @@ function showSub(m) {
     const oppHasNaysha = opponents.some(o => o.trId === "NAYSHA" || o.trId === "KESHAV");
     const currentPotBlock = potionBlock[turn] || 0;
     
-    itms.forEach((it, i) => {
+    for(let i = 0; i < 4; i++) {
+      const it = itms[i];
       const btn = document.getElementById('b' + i);
       btn.style.display = 'block';
       btn.innerText = `${it.n}(${it.v})`;
       btn.disabled = (it.v <= 0 || (oppHasNaysha && (it.t === "HP" || it.t === "ANTI")) || (currentPotBlock > 0 && (it.t === "HP" || it.t === "ANTI")));
       btn.onclick = () => prep(it, i, true);
-    });
+    }
   }
 }
 
@@ -394,13 +411,13 @@ function prep(m, i, isItm) {
   const o = opponents[0];
   curM = {...m, isItem:isItm};
   
-  // Remove selected class from all buttons
-  for(let j=0; j<4; j++) {
-    document.getElementById('b'+j).classList.remove('selected');
+  // Remove selected from all
+  for(let j = 0; j < 4; j++) {
+    document.getElementById('b' + j).classList.remove('selected');
   }
   
-  // Add selected class to clicked button
-  if(i !== -1) document.getElementById('b'+i).classList.add('selected');
+  // Add selected to clicked
+  if(i !== -1) document.getElementById('b' + i).classList.add('selected');
   
   // Update console
   document.getElementById('c-title').innerText = m.n;
@@ -424,7 +441,6 @@ function handleAction() {
   if(turn !== playerRole) return;
   document.getElementById('exec-trigger').style.display = 'none';
   
-  // Set action in Firebase
   gameStateRef.child('currentAction').set({ 
     player: playerRole, 
     move: curM, 
@@ -432,7 +448,6 @@ function handleAction() {
     timestamp: firebase.database.ServerValue.TIMESTAMP 
   });
   
-  // Execute action immediately for this player
   executeAction();
 }
 
@@ -446,10 +461,14 @@ function executeAction() {
   let msg = "";
   
   if(curM.isItem) {
+    // ITEM USAGE - DECREMENT ITEMS
     if(curM.t === 'HP') att.cur = Math.min(att.hp, att.cur + 7);
     if(curM.t === 'ANTI') { att.stun = 0; att.bleed = 0; att.weak = 0; }
     if(curM.t === 'BUFF') { att.buff = 3; att.accMod = 10; }
+    
+    // DECREMENT THE ITEM COUNT
     att.items[curM.t]--;
+    
     t.innerHTML = "<div class='crit-text' style='color:#0f0; border-color:#0f0'>[ FIXED ]</div>";
   } else {
     let hit = (curM.p || 100) + att.accMod;
@@ -515,7 +534,7 @@ function executeAction() {
   
   updateUI();
   
-  // Update Firebase with new state
+  // Update Firebase
   const stateUpdate = { 'currentAction/processed': true, potionBlock, dmgReduction };
   Object.keys(players).forEach(key => stateUpdate[key] = serializePlayer(players[key]));
   gameStateRef.update(stateUpdate);
@@ -594,4 +613,6 @@ function endTurn() {
   }
 }
 
-window.addEventListener('beforeunload', () => { if(roomRef) roomRef.child('players/' + playerRole + '/connected').set(false); });
+window.addEventListener('beforeunload', () => { 
+  if(roomRef) roomRef.child('players/' + playerRole + '/connected').set(false); 
+});
