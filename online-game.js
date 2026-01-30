@@ -334,26 +334,29 @@ function updateUI() {
   });
 }
 
+// CRITICAL FIX: Proper button management
 function showMain() {
   document.getElementById('ticker').innerText = "";
   const isMyTurn = turn === playerRole;
   
-  // Hide category buttons
   const catAtt = document.getElementById('cat-att');
   const catItm = document.getElementById('cat-itm');
+  const b0 = document.getElementById('b0');
+  const b1 = document.getElementById('b1');
+  const b2 = document.getElementById('b2');
+  const b3 = document.getElementById('b3');
+  
+  // CRITICAL: Hide and reset buttons
   catAtt.style.display = 'none';
   catItm.style.display = 'none';
-  
-  // CRITICAL FIX: Hide ALL 4 buttons explicitly
-  document.getElementById('b0').style.display = 'none';
-  document.getElementById('b1').style.display = 'none';
-  document.getElementById('b2').style.display = 'none';
-  document.getElementById('b3').style.display = 'none';
-  
-  document.getElementById('b0').classList.remove('selected');
-  document.getElementById('b1').classList.remove('selected');
-  document.getElementById('b2').classList.remove('selected');
-  document.getElementById('b3').classList.remove('selected');
+  b0.style.display = 'none';
+  b1.style.display = 'none';
+  b2.style.display = 'none';
+  b3.style.display = 'none';
+  b0.classList.remove('selected');
+  b1.classList.remove('selected');
+  b2.classList.remove('selected');
+  b3.classList.remove('selected');
   
   document.getElementById('exec-trigger').style.display = 'none';
   
@@ -367,48 +370,81 @@ function showMain() {
   }
 }
 
+// CRITICAL FIX: Direct button access (no loops!)
 function showSub(m) {
-  document.getElementById('cat-att').style.display = 'none';
-  document.getElementById('cat-itm').style.display = 'none';
+  const catAtt = document.getElementById('cat-att');
+  const catItm = document.getElementById('cat-itm');
+  catAtt.style.display = 'none';
+  catItm.style.display = 'none';
   
   const a = players[turn];
   if(!a || !a.moves) return;
   
   const opponents = Object.values(players).filter(p => p.team !== a.team && p.cur > 0);
-  
-  // CRITICAL FIX: Always hide all 4 buttons first
-  document.getElementById('b0').style.display = 'none';
-  document.getElementById('b1').style.display = 'none';
-  document.getElementById('b2').style.display = 'none';
-  document.getElementById('b3').style.display = 'none';
+  const b0 = document.getElementById('b0');
+  const b1 = document.getElementById('b1');
+  const b2 = document.getElementById('b2');
+  const b3 = document.getElementById('b3');
   
   if(m === 'ATTACK') {
-    // Show only as many buttons as there are moves
-    a.moves.forEach((mv, i) => {
-      const btn = document.getElementById('b' + i);
-      btn.style.display = 'block';
-      btn.innerText = mv.n;
-      btn.disabled = (a.used.includes(mv.n) || (mv.t === "SHIELD" && a.shieldLock));
-      btn.onclick = () => prep(mv, i, false);
-    });
+    // ALL BEASTS HAVE EXACTLY 4 MOVES - Show them directly
+    const m0 = a.moves[0];
+    const m1 = a.moves[1];
+    const m2 = a.moves[2];
+    const m3 = a.moves[3];
+    
+    // Button 0
+    b0.style.display = 'block';
+    b0.innerText = m0.n;
+    b0.disabled = (a.used.includes(m0.n) || (m0.t === "SHIELD" && a.shieldLock));
+    b0.onclick = function() { prep(m0, 0, false); };
+    
+    // Button 1
+    b1.style.display = 'block';
+    b1.innerText = m1.n;
+    b1.disabled = (a.used.includes(m1.n) || (m1.t === "SHIELD" && a.shieldLock));
+    b1.onclick = function() { prep(m1, 1, false); };
+    
+    // Button 2
+    b2.style.display = 'block';
+    b2.innerText = m2.n;
+    b2.disabled = (a.used.includes(m2.n) || (m2.t === "SHIELD" && a.shieldLock));
+    b2.onclick = function() { prep(m2, 2, false); };
+    
+    // Button 3
+    b3.style.display = 'block';
+    b3.innerText = m3.n;
+    b3.disabled = (a.used.includes(m3.n) || (m3.t === "SHIELD" && a.shieldLock));
+    b3.onclick = function() { prep(m3, 3, false); };
+    
   } else {
-    // Show all 4 item buttons
-    const itms = [
-      {n:"HP POTION", t:"HP", v:a.items.HP, d:"+7 HP"},
-      {n:"ANTI", t:"ANTI", v:a.items.ANTI, d:"Clear status"},
-      {n:"BUFF", t:"BUFF", v:a.items.BUFF, d:"+3 DMG & +10% ACC"},
-      {n:"BACKUP", t:"BKUP", v:a.items.BKUP, d:"Revive Life"}
-    ];
+    // ITEMS - show all 4
     const oppHasNaysha = opponents.some(o => o.trId === "NAYSHA" || o.trId === "KESHAV");
     const currentPotBlock = potionBlock[turn] || 0;
     
-    itms.forEach((it, i) => {
-      const btn = document.getElementById('b' + i);
-      btn.style.display = 'block';
-      btn.innerText = `${it.n}(${it.v})`;
-      btn.disabled = (it.v <= 0 || (oppHasNaysha && (it.t === "HP" || it.t === "ANTI")) || (currentPotBlock > 0 && (it.t === "HP" || it.t === "ANTI")));
-      btn.onclick = () => prep(it, i, true);
-    });
+    // HP Potion
+    b0.style.display = 'block';
+    b0.innerText = `HP POTION(${a.items.HP})`;
+    b0.disabled = (a.items.HP <= 0 || oppHasNaysha || currentPotBlock > 0);
+    b0.onclick = function() { prep({n:"HP POTION", t:"HP", v:a.items.HP}, 0, true); };
+    
+    // ANTI
+    b1.style.display = 'block';
+    b1.innerText = `ANTI(${a.items.ANTI})`;
+    b1.disabled = (a.items.ANTI <= 0 || oppHasNaysha || currentPotBlock > 0);
+    b1.onclick = function() { prep({n:"ANTI", t:"ANTI", v:a.items.ANTI}, 1, true); };
+    
+    // BUFF
+    b2.style.display = 'block';
+    b2.innerText = `BUFF(${a.items.BUFF})`;
+    b2.disabled = (a.items.BUFF <= 0);
+    b2.onclick = function() { prep({n:"BUFF", t:"BUFF", v:a.items.BUFF}, 2, true); };
+    
+    // BACKUP
+    b3.style.display = 'block';
+    b3.innerText = `BACKUP(${a.items.BKUP})`;
+    b3.disabled = (a.items.BKUP <= 0);
+    b3.onclick = function() { prep({n:"BACKUP", t:"BKUP", v:a.items.BKUP}, 3, true); };
   }
 }
 
@@ -423,7 +459,7 @@ function prep(m, i, isItm) {
   document.getElementById('b2').classList.remove('selected');
   document.getElementById('b3').classList.remove('selected');
   
-  if(i !== -1) document.getElementById('b' + i).classList.add('selected');
+  if(i >= 0 && i <= 3) document.getElementById('b' + i).classList.add('selected');
   
   document.getElementById('c-title').innerText = m.n;
   let acc = m.p || 100;
@@ -466,85 +502,104 @@ function executeAction() {
   let msg = "";
   
   if(curM.isItem) {
-    // CRITICAL FIX: DEPLETE ITEMS PROPERLY
+    // CRITICAL FIX: Proper potion handling with turn end
     if(curM.t === 'HP') {
-      att.cur = Math.min(att.hp, att.cur + 7);
+      const healAmount = 7;
+      att.cur = Math.min(att.hp, att.cur + healAmount);
       att.items.HP--;
+      msg = `<div class='crit-text' style='color:#0f0; border-color:#0f0'>[ +${healAmount} HP ]</div>`;
     }
     else if(curM.t === 'ANTI') {
       att.stun = 0;
       att.bleed = 0;
       att.weak = 0;
       att.items.ANTI--;
+      msg = "<div class='crit-text' style='color:#00f; border-color:#00f'>[ CLEANSED ]</div>";
     }
     else if(curM.t === 'BUFF') {
       att.buff = 3;
       att.accMod = 10;
       att.items.BUFF--;
+      msg = "<div class='crit-text' style='color:#ff0; border-color:#ff0'>[ BUFFED ]</div>";
     }
     
-    t.innerHTML = "<div class='crit-text' style='color:#0f0; border-color:#0f0'>[ FIXED ]</div>";
-  } else {
-    let hit = (curM.p || 100) + att.accMod;
-    const isSp = (curM.t === "DMG" || curM.t === "RAND_DMG" || curM.t === "STUN" || curM.t === "SILENCE" || curM.t === "PERCENT" || curM.t === "SPEECH_STUN");
-    if((def.trId === "UDAY" || def.trId === "KESHAV") && isSp && curM.t !== "WIS" && curM.t !== "SHIELD") hit -= 15;
-    if((att.trId === "CHAHAK" || att.trId === "KESHAV") && isSp) hit += 10;
-    if(def.evasion > 0) { hit -= 50; def.evasion = 0; }
-    let dodged = false;
-    if((def.trId === "ADVIK" || def.trId === "KESHAV") && (isSp || att.buff > 0)) if(Math.random() < 0.2) dodged = true;
+    t.innerHTML = msg;
+    updateUI();
     
-    if(Math.random() * 100 > hit || dodged) {
-      t.innerHTML = dodged ? "<div class='crit-text' style='color:#ff4500;'>[ DODGED ]</div>" : "<div class='crit-text' style='color:#888; border-color:#888'>[ MISSED ]</div>";
-      att.accMod = 0;
-    } else {
-      let d = (curM.val || 0);
-      if(curM.t === "RAND_DMG") d = Math.floor(Math.random() * (curM.max - curM.min + 1)) + curM.min;
-      if(curM.t === "RISK") { att.cur = Math.max(1, att.cur - 8); d = 10; }
-      if(curM.t === "WIS") d = (def.cur > att.cur) ? Math.floor(def.cur / 2) : 0;
-      if(curM.t === "DS") d = (def.cur < (def.hp * 0.3)) ? def.cur : 2;
-      if(curM.t === "PERCENT") d = Math.floor(att.cur * 0.5);
-      if(curM.t === "SPEECH_STUN") { def.stun = 3; d = 0; }
-      if(curM.t === "WARRANT") {
-        if(def.cur <= 20) { potionBlock[def.role] = 5; dmgReduction[def.role] = 2; msg = "[ WARRANT ACTIVATED ]"; d = 0; }
-        else { d = 0; msg = "[ WARRANT FAILED ]"; }
-      }
-      if(curM.t === "HEAL") { att.cur = Math.min(att.hp, att.cur + 3); d = 0; msg = "[ HEALED ]"; }
-      if(curM.t === "SWAP") { let tmp = att.cur; att.cur = def.cur; def.cur = tmp; d = 0; msg = "[ SWAPPED ]"; }
-      if(curM.t === "BLEED") def.bleed = 3;
-      if(curM.t === "BLEED_RAND") { def.bleed = 3; d = Math.floor(Math.random() * 2) + 1; }
-      if(curM.t === "WEAK") def.weak = 3;
-      if(curM.t === "STUN") def.stun = (curM.n === "Bald Shine" || curM.n === "Pause" || curM.n === "Totalitarian" || curM.n === "Out Syllabus" || curM.n === "Go out") ? 2 : 1;
-      if(curM.t === "SILENCE") def.stun = 1;
-      if(curM.t === "EVA") { att.evasion = 1; msg = "[ EVASIVE ]"; }
-      
-      if(att.weak > 0 && d > 0) d = Math.floor(d / 2);
-      const currentDmgRed = dmgReduction[turn] || 0;
-      if(currentDmgRed > 0 && d > 0) d = Math.max(0, d - currentDmgRed);
-      if((att.trId === "CHAHAK" || att.trId === "KESHAV") && isSp && d > 0) d += 2;
-      
-      if(def.shield > 0 && (d > 0 || curM.t === "WRATH")) {
-        if(att.buff > 0) { def.shield = 0; def.shieldLock = true; msg = "<div class='crit-text' style='color:#ff00ea; border-color:#ff00ea'>[ BROKEN ]</div>"; }
-        else if(curM.t === "WRATH" || curM.t === "RISK") { def.shield = 0; msg = "<div class='crit-text' style='color:#ff00ea; border-color:#ff00ea'>[ PIERCED ]</div>"; }
-        else { d = 0; def.shield--; msg = "<div class='crit-text' style='color:#00f3ff; border-color:#00f3ff'>[ BLOCKED ]</div>"; }
-      }
-      
-      if(att.buff > 0 && d > 0) { d += 3; if(!dodged) att.buff = 0; }
-      att.accMod = 0;
-      
-      if(curM.t === "WRATH") { def.cur = 1; d = 0; msg = "[ WRATH ]"; }
-      if(curM.t === "LEECH") att.cur = Math.min(att.hp, att.cur + d);
-      if(curM.t === "SHIELD" && !att.shieldLock) { att.shield = 3; msg = "[ SHIELD UP ]"; }
-      
-      def.cur = Math.max(0, def.cur - d);
-      if(d > 0 && sDef) { sDef.classList.add('shake'); att.hasDealtDmg = true; setTimeout(() => sDef.classList.remove('shake'), 300); }
-      
-      if((def.trId === "ADYA" || def.trId === "KESHAV") && d > 0) { att.cur = Math.max(0, att.cur - 1); msg = msg ? msg + " + [RECOIL]" : "[ RECOIL ]"; }
-      
-      t.innerHTML = msg || `<div class='crit-text'>-[ ${Math.floor(d)} ]</div>`;
-    }
-    if(curM.once) att.used.push(curM.n);
-    att.lastMoveName = curM.n;
+    // Sync to Firebase
+    const stateUpdate = { 'currentAction/processed': true, potionBlock, dmgReduction };
+    Object.keys(players).forEach(key => stateUpdate[key] = serializePlayer(players[key]));
+    gameStateRef.update(stateUpdate);
+    
+    // CRITICAL: End turn after potion
+    setTimeout(() => {
+      document.getElementById('ticker').innerText = "";
+      endTurn();
+    }, 1200);
+    
+    return; // Exit early for items
   }
+  
+  // ATTACK LOGIC (rest of code continues...)
+  let hit = (curM.p || 100) + att.accMod;
+  const isSp = (curM.t === "DMG" || curM.t === "RAND_DMG" || curM.t === "STUN" || curM.t === "SILENCE" || curM.t === "PERCENT" || curM.t === "SPEECH_STUN");
+  if((def.trId === "UDAY" || def.trId === "KESHAV") && isSp && curM.t !== "WIS" && curM.t !== "SHIELD") hit -= 15;
+  if((att.trId === "CHAHAK" || att.trId === "KESHAV") && isSp) hit += 10;
+  if(def.evasion > 0) { hit -= 50; def.evasion = 0; }
+  let dodged = false;
+  if((def.trId === "ADVIK" || def.trId === "KESHAV") && (isSp || att.buff > 0)) if(Math.random() < 0.2) dodged = true;
+  
+  if(Math.random() * 100 > hit || dodged) {
+    t.innerHTML = dodged ? "<div class='crit-text' style='color:#ff4500;'>[ DODGED ]</div>" : "<div class='crit-text' style='color:#888; border-color:#888'>[ MISSED ]</div>";
+    att.accMod = 0;
+  } else {
+    let d = (curM.val || 0);
+    if(curM.t === "RAND_DMG") d = Math.floor(Math.random() * (curM.max - curM.min + 1)) + curM.min;
+    if(curM.t === "RISK") { att.cur = Math.max(1, att.cur - 8); d = 10; }
+    if(curM.t === "WIS") d = (def.cur > att.cur) ? Math.floor(def.cur / 2) : 0;
+    if(curM.t === "DS") d = (def.cur < (def.hp * 0.3)) ? def.cur : 2;
+    if(curM.t === "PERCENT") d = Math.floor(att.cur * 0.5);
+    if(curM.t === "SPEECH_STUN") { def.stun = 3; d = 0; }
+    if(curM.t === "WARRANT") {
+      if(def.cur <= 20) { potionBlock[def.role] = 5; dmgReduction[def.role] = 2; msg = "[ WARRANT ACTIVATED ]"; d = 0; }
+      else { d = 0; msg = "[ WARRANT FAILED ]"; }
+    }
+    if(curM.t === "HEAL") { att.cur = Math.min(att.hp, att.cur + 3); d = 0; msg = "[ HEALED ]"; }
+    if(curM.t === "SWAP") { let tmp = att.cur; att.cur = def.cur; def.cur = tmp; d = 0; msg = "[ SWAPPED ]"; }
+    if(curM.t === "BLEED") def.bleed = 3;
+    if(curM.t === "BLEED_RAND") { def.bleed = 3; d = Math.floor(Math.random() * 2) + 1; }
+    if(curM.t === "WEAK") def.weak = 3;
+    if(curM.t === "STUN") def.stun = (curM.n === "Bald Shine" || curM.n === "Pause" || curM.n === "Totalitarian" || curM.n === "Out Syllabus" || curM.n === "Go out") ? 2 : 1;
+    if(curM.t === "SILENCE") def.stun = 1;
+    if(curM.t === "EVA") { att.evasion = 1; msg = "[ EVASIVE ]"; }
+    
+    if(att.weak > 0 && d > 0) d = Math.floor(d / 2);
+    const currentDmgRed = dmgReduction[turn] || 0;
+    if(currentDmgRed > 0 && d > 0) d = Math.max(0, d - currentDmgRed);
+    if((att.trId === "CHAHAK" || att.trId === "KESHAV") && isSp && d > 0) d += 2;
+    
+    if(def.shield > 0 && (d > 0 || curM.t === "WRATH")) {
+      if(att.buff > 0) { def.shield = 0; def.shieldLock = true; msg = "<div class='crit-text' style='color:#ff00ea; border-color:#ff00ea'>[ BROKEN ]</div>"; }
+      else if(curM.t === "WRATH" || curM.t === "RISK") { def.shield = 0; msg = "<div class='crit-text' style='color:#ff00ea; border-color:#ff00ea'>[ PIERCED ]</div>"; }
+      else { d = 0; def.shield--; msg = "<div class='crit-text' style='color:#00f3ff; border-color:#00f3ff'>[ BLOCKED ]</div>"; }
+    }
+    
+    if(att.buff > 0 && d > 0) { d += 3; if(!dodged) att.buff = 0; }
+    att.accMod = 0;
+    
+    if(curM.t === "WRATH") { def.cur = 1; d = 0; msg = "[ WRATH ]"; }
+    if(curM.t === "LEECH") att.cur = Math.min(att.hp, att.cur + d);
+    if(curM.t === "SHIELD" && !att.shieldLock) { att.shield = 3; msg = "[ SHIELD UP ]"; }
+    
+    def.cur = Math.max(0, def.cur - d);
+    if(d > 0 && sDef) { sDef.classList.add('shake'); att.hasDealtDmg = true; setTimeout(() => sDef.classList.remove('shake'), 300); }
+    
+    if((def.trId === "ADYA" || def.trId === "KESHAV") && d > 0) { att.cur = Math.max(0, att.cur - 1); msg = msg ? msg + " + [RECOIL]" : "[ RECOIL ]"; }
+    
+    t.innerHTML = msg || `<div class='crit-text'>-[ ${Math.floor(d)} ]</div>`;
+  }
+  if(curM.once) att.used.push(curM.n);
+  att.lastMoveName = curM.n;
   
   updateUI();
   
