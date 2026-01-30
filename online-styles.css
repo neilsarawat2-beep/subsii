@@ -350,20 +350,3 @@
   gap: 15px;
   padding: 20px;
 }
-
-/* ENSURE MOVE BUTTONS ARE VISIBLE */
-.move-btn {
-  display: block !important;
-  opacity: 1 !important;
-  visibility: visible !important;
-}
-
-.move-btn[style*="display: none"] {
-  display: none !important;
-}
-
-.move-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-  color: #333;
-}
