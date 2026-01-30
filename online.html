@@ -12,6 +12,7 @@
 <div id="game-window">
 <button id="back-btn" onclick="goBack()">← BACK</button>
 
+<!-- MODE SELECTION SCREEN -->
 <div id="mode-selection">
 <h1>ONLINE MODE</h1>
 <button class="mode-choice-btn" onclick="selectGameMode('1v1')">1v1 MODE</button>
@@ -19,6 +20,7 @@
 <button class="mode-choice-btn" onclick="selectGameMode('2v2')">2v2 MODE</button>
 </div>
 
+<!-- ROOM SCREEN -->
 <div id="room-screen" style="display: none;">
 <h1 id="room-title">1V1 MODE</h1>
 <div style="display: flex; gap: 50px; flex-wrap: wrap; justify-content: center;">
@@ -37,12 +39,14 @@
 <button class="room-btn" onclick="cancelRoom()" style="margin-top: 30px; border-color: #f00; color: #f00;">CANCEL</button>
 </div>
 
+<!-- SELECTION SCREEN -->
 <div id="selection-screen" style="display: none;">
 <h1>ONLINE BATTLE</h1>
-<div id="sel-hint" style="color:#555; letter-spacing:4px; margin-bottom:10px;">[ SELECT YOUR UNIT ]</div>
+<div id="sel-hint">[ SELECT YOUR UNIT ]</div>
 <div class="grid" id="roster"></div>
 </div>
 
+<!-- BATTLE SCREEN -->
 <div id="battle-screen" style="display: none;">
 <div id="ticker"></div>
 <div class="hud-top">
