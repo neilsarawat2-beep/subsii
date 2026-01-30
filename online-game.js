@@ -344,21 +344,23 @@ function showMain() {
   catAtt.style.display = 'none';
   catItm.style.display = 'none';
   
-  // Hide all 4 move buttons
-  for(let i = 0; i < 4; i++) { 
-    const btn = document.getElementById('b' + i);
-    btn.style.display = 'none'; 
-    btn.classList.remove('selected'); 
-  }
+  // CRITICAL FIX: Hide ALL 4 buttons explicitly
+  document.getElementById('b0').style.display = 'none';
+  document.getElementById('b1').style.display = 'none';
+  document.getElementById('b2').style.display = 'none';
+  document.getElementById('b3').style.display = 'none';
+  
+  document.getElementById('b0').classList.remove('selected');
+  document.getElementById('b1').classList.remove('selected');
+  document.getElementById('b2').classList.remove('selected');
+  document.getElementById('b3').classList.remove('selected');
   
   document.getElementById('exec-trigger').style.display = 'none';
   
   if(isMyTurn) {
-    // Show category buttons for my turn
     catAtt.style.display = 'block';
     catItm.style.display = 'block';
   } else {
-    // Show opponent's turn
     if(players[turn]) {
       document.getElementById('ticker').innerText = `${players[turn].n.toUpperCase()}'S TURN...`;
     }
@@ -366,25 +368,31 @@ function showMain() {
 }
 
 function showSub(m) {
-  // Hide category buttons
   document.getElementById('cat-att').style.display = 'none';
   document.getElementById('cat-itm').style.display = 'none';
   
   const a = players[turn];
+  if(!a || !a.moves) return;
+  
   const opponents = Object.values(players).filter(p => p.team !== a.team && p.cur > 0);
   
+  // CRITICAL FIX: Always hide all 4 buttons first
+  document.getElementById('b0').style.display = 'none';
+  document.getElementById('b1').style.display = 'none';
+  document.getElementById('b2').style.display = 'none';
+  document.getElementById('b3').style.display = 'none';
+  
   if(m === 'ATTACK') {
-    // Show ALL 4 move buttons
-    for(let i = 0; i < 4; i++) {
-      const mv = a.moves[i];
+    // Show only as many buttons as there are moves
+    a.moves.forEach((mv, i) => {
       const btn = document.getElementById('b' + i);
       btn.style.display = 'block';
       btn.innerText = mv.n;
       btn.disabled = (a.used.includes(mv.n) || (mv.t === "SHIELD" && a.shieldLock));
       btn.onclick = () => prep(mv, i, false);
-    }
+    });
   } else {
-    // Show ALL 4 item buttons
+    // Show all 4 item buttons
     const itms = [
       {n:"HP POTION", t:"HP", v:a.items.HP, d:"+7 HP"},
       {n:"ANTI", t:"ANTI", v:a.items.ANTI, d:"Clear status"},
@@ -394,14 +402,13 @@ function showSub(m) {
     const oppHasNaysha = opponents.some(o => o.trId === "NAYSHA" || o.trId === "KESHAV");
     const currentPotBlock = potionBlock[turn] || 0;
     
-    for(let i = 0; i < 4; i++) {
-      const it = itms[i];
+    itms.forEach((it, i) => {
       const btn = document.getElementById('b' + i);
       btn.style.display = 'block';
       btn.innerText = `${it.n}(${it.v})`;
       btn.disabled = (it.v <= 0 || (oppHasNaysha && (it.t === "HP" || it.t === "ANTI")) || (currentPotBlock > 0 && (it.t === "HP" || it.t === "ANTI")));
       btn.onclick = () => prep(it, i, true);
-    }
+    });
   }
 }
 
@@ -411,15 +418,13 @@ function prep(m, i, isItm) {
   const o = opponents[0];
   curM = {...m, isItem:isItm};
   
-  // Remove selected from all
-  for(let j = 0; j < 4; j++) {
-    document.getElementById('b' + j).classList.remove('selected');
-  }
+  document.getElementById('b0').classList.remove('selected');
+  document.getElementById('b1').classList.remove('selected');
+  document.getElementById('b2').classList.remove('selected');
+  document.getElementById('b3').classList.remove('selected');
   
-  // Add selected to clicked
   if(i !== -1) document.getElementById('b' + i).classList.add('selected');
   
-  // Update console
   document.getElementById('c-title').innerText = m.n;
   let acc = m.p || 100;
   let mods = a.accMod;
@@ -461,13 +466,22 @@ function executeAction() {
   let msg = "";
   
   if(curM.isItem) {
-    // ITEM USAGE - DECREMENT ITEMS
-    if(curM.t === 'HP') att.cur = Math.min(att.hp, att.cur + 7);
-    if(curM.t === 'ANTI') { att.stun = 0; att.bleed = 0; att.weak = 0; }
-    if(curM.t === 'BUFF') { att.buff = 3; att.accMod = 10; }
-    
-    // DECREMENT THE ITEM COUNT
-    att.items[curM.t]--;
+    // CRITICAL FIX: DEPLETE ITEMS PROPERLY
+    if(curM.t === 'HP') {
+      att.cur = Math.min(att.hp, att.cur + 7);
+      att.items.HP--;
+    }
+    else if(curM.t === 'ANTI') {
+      att.stun = 0;
+      att.bleed = 0;
+      att.weak = 0;
+      att.items.ANTI--;
+    }
+    else if(curM.t === 'BUFF') {
+      att.buff = 3;
+      att.accMod = 10;
+      att.items.BUFF--;
+    }
     
     t.innerHTML = "<div class='crit-text' style='color:#0f0; border-color:#0f0'>[ FIXED ]</div>";
   } else {
@@ -534,7 +548,6 @@ function executeAction() {
   
   updateUI();
   
-  // Update Firebase
   const stateUpdate = { 'currentAction/processed': true, potionBlock, dmgReduction };
   Object.keys(players).forEach(key => stateUpdate[key] = serializePlayer(players[key]));
   gameStateRef.update(stateUpdate);
@@ -584,7 +597,6 @@ function endTurn() {
   if(c.weak > 0) c.weak--;
   c.hasDealtDmg = false;
   
-  // Find next alive player
   let nextIndex = (currentTurnIndex + 1) % turnOrder.length;
   let attempts = 0;
   while(players[turnOrder[nextIndex]].cur <= 0 && attempts < turnOrder.length) { 
