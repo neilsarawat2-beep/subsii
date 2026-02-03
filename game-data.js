@@ -106,7 +106,7 @@ window.db = {
 const evoTree = {
   "Paricheymon": ["Deepalimon", "PradeepMon"],
   "Debosmitamon": ["Etikamon", "Swatimon"],
-  "Smitimon": ["Rohitmon", "MonsinMon"]
+  "Smitimon": ["GarimaJmon", "MonsinMon"]
 };
 
 window.trainers = {
@@ -122,4 +122,5 @@ window.trainers = {
   "Brat Advik": {id: "ADVIK", c: "#ff4500", name: "Over-confidence", d: "20% dodge special moves."},
   "Lord Keshav": {id: "KESHAV", c: "#ffffff", name: "God's Touch", d: "All trainer abilities combined."}
 };
+
 
